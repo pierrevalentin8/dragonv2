@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Popote & Dragons</title>
+<style>
+body { 
+    font-family: 'Courier New', monospace; 
+    color: #3b2f2f; /* texte marron foncé sur fond clair */
+    background-color: #d2b48c; /* marron clair style parchemin */
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    margin: 0; 
+}
+
+    .login-container, .village-container { background-color: rgba(0,0,0,0.75); padding: 30px; border: 3px solid #d4af37; border-radius: 15px; text-align: center; min-width: 320px; }
+   h1, h2, h3 {
+    color: #d4af37; /* doré */
+    text-shadow: 1px 1px #3b2f2f; /* ombre marron foncé */
+}
+
+    button { font-family: 'Courier New', monospace; background-color: #444; color: #f5f5dc; border: 2px solid #d4af37; padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 1em; border-radius: 5px; width: 90%; }
+    button:hover { background-color: #555; }
+    .popup { display: none; position: fixed; top:50%; left:50%; transform: translate(-50%,-50%); background-color: rgba(0,0,0,0.95); padding:30px; border:2px solid #d4af37; border-radius:10px; z-index:1000; min-width:320px; }
+    .popup input, .popup select { display:block; margin:10px auto; padding:8px; border-radius:5px; border:1px solid #d4af37; width:85%; background-color:#222; color:#f5f5dc; }
+    .overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:500; }
+    #explorePopup {
+    display: none;
+    position: fixed;
+    top:50%;
+    left:50%;
+    transform: translate(-50%,-50%);
+    background-color: rgba(30,0,0,0.95); /* sombre style donjon */
+    color: #f5f5dc; /* texte beige */
+    padding:30px;
+    border:3px solid #d4af37; /* doré */
+    border-radius:15px;
+    z-index:1001;
+    min-width: 300px;
+    max-width: 400px;
+    text-align: center;
+    font-family: 'IM Fell English SC', serif;
+}
+
+#explorePopup h2 {
+    color: #d4af37;
+    text-shadow: 1px 1px #000;
+    margin-bottom: 15px;
+}
+
+#exploreContent img {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 10px;
+}
+
+#explorePopup button {
+    background-color: #444;
+    color: #f5f5dc;
+    border: 2px solid #d4af37;
+    border-radius: 5px;
+    padding: 8px 15px;
+    cursor: pointer;
+}
+#explorePopup button:hover {
+    background-color: #555;
+}
+
+   /* === Village layout esthétique retro fantasy === */
+.village-container { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 20px; }
+.village-header { text-align: center; }
+#villageImage { max-width: 400px; width: 80%; border: 3px solid #d4af37; border-radius: 10px; margin-bottom: 10px; }
+.village-header h1 { color: #d4af37; font-size: 2.5em; text-shadow: 2px 2px #000; margin-bottom: 20px; }
+
+.village-main { display: flex; flex-direction: row; justify-content: center; align-items: flex-start; gap: 30px; width: 100%; max-width: 900px; }
+.player-panel { background-color: rgba(0,0,0,0.75); border: 2px solid #d4af37; border-radius: 10px; padding: 20px; flex: 2; color: #f5f5dc; }
+.player-panel h2, .player-panel h3 { margin: 10px 0; }
+.player-panel ul { list-style: none; padding: 0; text-align: left; font-size: 1.1em; }
+.player-panel li { margin: 5px 0; }
+
+.actions-panel { display: flex; flex-direction: column; gap: 10px; flex: 1; align-items: flex-end; }
+.actions-panel button { width: 120px; background-color: rgba(68,68,68,0.9); border: 2px solid #d4af37; font-size: 0.95em; }
+.actions-panel button:hover { background-color: rgba(85,85,85,0.95); }
+
+/* Responsive */
+@media screen and (max-width: 768px){
+    .village-main { flex-direction: column; align-items: center; }
+    .actions-panel { align-items: center; }
+}
+.login-footer {
+    margin-top: 20px;
+    text-align: center;
+    color: #f5f5dc;
+    font-size: 0.9em;
+    border-top: 2px solid #d4af37;
+    padding-top: 5px;
+}
+button {
+  box-shadow: 2px 2px 0 #000;
+}
+button:active {
+  box-shadow: none;
+  transform: translate(2px,2px);
+}
+h1, h2, h3 {
+  font-family: 'IM Fell English SC', serif;
+}
+.stat-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 5px 0;
+    gap: 5px;
+}
+.stat-row button {
+    width: 30px;
+    padding: 2px 5px;
+    font-size: 1em;
+    cursor: pointer;
+}
+.stat-row span {
+    width: 30px;
+    text-align: center;
+    display: inline-block;
+}
+/* === FICHE PERSONNAGE CLAIRE ET LISIBLE === */
+#characterSheetPopup {
+    background-color: #f5f5dc; /* fond beige clair */
+    color: #3b2f2f; /* texte marron foncé */
+    border: 3px solid #d4af37; /* bordure dorée */
+    border-radius: 15px;
+    padding: 25px 30px;
+    min-width: 350px;
+    max-width: 450px;
+    text-align: center;
+    font-size: 1em;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
+#characterSheetPopup h2 {
+    color: #d4af37;
+    text-shadow: 1px 1px #3b2f2f;
+    font-size: 1.8em;
+    margin-bottom: 15px;
+}
+
+#characterSheetPopup .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(255,255,255,0.8);
+    padding: 6px 10px;
+    margin: 6px 0;
+    border-radius: 8px;
+    font-weight: bold;
+    color: #3b2f2f;
+}
+
+#characterSheetPopup .stat-row button {
+    width: 35px;
+    height: 30px;
+    font-size: 1em;
+    font-weight: bold;
+    background-color: #d4af37;
+    color: #3b2f2f;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#characterSheetPopup .stat-row button:hover {
+    background-color: #e6c35c;
+}
+
+#characterSheetPopup span {
+    min-width: 35px;
+    display: inline-block;
+    text-align: center;
+}
+
+#characterSheetPopup #pcText {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 12px;
+}
+#characterSheetPopup #pcText {
+    font-weight: bold;
+    font-size: 1.2em;
+    margin-bottom: 12px;
+    background-color: rgba(150, 126, 46, 0.2); /* léger fond doré derrière le texte */
+    padding: 4px 8px;
+    border-radius: 5px;
+}
+/* === Tableau Admin Fantasy === */
+/* Inputs et selects dans le tableau admin */
+#adminPlayersList select {
+    width: 100%;             /* prend toute la largeur de la cellule */
+    padding: 4px 6px;
+    border-radius: 5px;
+    border: 1px solid #d4af37;
+    background-color: #222;
+    color: #f5f5dc;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+#adminPlayersList td {
+    min-width: 150px;       /* largeur minimale pour que le contenu tienne */
+}
+
+#adminPlayersList td button {
+    width: 100%;             /* bouton prend toute la cellule */
+    box-sizing: border-box;
+}
+/* Admin Table responsive */
+#adminPlayersList {
+    overflow-x: auto; /* scroll horizontal si nécessaire */
+    margin-top: 10px;
+}
+
+#adminPlayersList table {
+    border-collapse: collapse;
+    width: auto;
+    margin: 0 auto;
+}
+
+#adminPlayersList th, #adminPlayersList td {
+    border: 1px solid #3b2f2f;
+    padding: 5px;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Mobile friendly */
+@media screen and (max-width: 400px){
+    .village-main { flex-direction: column; align-items: center; gap: 15px; }
+    .actions-panel { align-items: center; width: 100%; }
+    .actions-panel button { width: 90%; }
+    #characterSheetPopup { min-width: 90%; max-width: 95%; padding: 15px; }
+    #adminPlayersList table { width: 100%; }
+    #adminPlayersList th, #adminPlayersList td { min-width: auto; padding: 3px; font-size: 0.85em; }
+}
+/* POPUP AMÉLIORATION MAISON - STYLE FANTASY */
+#upgradeHousePopup {
+    display: none;
+    position: fixed;
+    top:50%; left:50%;
+    transform: translate(-50%,-50%);
+    background-color: #f5f0dc; /* parchemin clair */
+    padding: 30px;
+    border: 4px solid #d4af37; /* doré */
+    border-radius: 15px;
+    z-index: 1000;
+    min-width: 320px;
+    text-align: center;
+    color: #3b2f2f; /* marron foncé */
+    font-family: 'IM Fell English SC', serif;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+#upgradeHousePopup h2 {
+    color: #b8860b; /* doré profond */
+    text-shadow: 1px 1px #3b2f2f;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+#upgradeHousePopup p {
+    background-color: rgba(212,175,55,0.1); /* léger fond doré */
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 1.1em;
+    margin: 10px 0;
+    text-shadow: 0 0 2px #000;
+}
+
+#upgradeHousePopup button {
+    background-color: #444;
+    color: #f5f5dc;
+    border: 2px solid #d4af37;
+    padding: 10px 20px;
+    margin: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    border-radius: 8px;
+    box-shadow: 2px 2px 0 #000;
+}
+
+#upgradeHousePopup button:hover {
+    background-color: #555;
+}
+.bank-dashboard {
+    width: 250px;
+    border-radius: 12px;
+    padding: 15px;
+    background: linear-gradient(145deg, #fdf6e3, #f0e6d2);
+    box-shadow: 4px 4px 10px rgba(0,0,0,0.2);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    margin: 15px;
+}
+
+.bank-dashboard h3 {
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 18px;
+    color: #6b4226;
+}
+
+.bank-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+.gold-row {
+    background-color: #fff8dc;
+    color: #b8860b;
+}
+
+.house-row {
+    background-color: #e6f7ff;
+    color: #1e90ff;
+}
+
+.village-row {
+    background-color: #f9e6ff;
+    color: #a020f0;
+}
+
+.bank-row:hover {
+    background-color: #f0f0f0;
+}
+
+.bank-label {
+    font-size: 14px;
+}
+
+.bank-value {
+    font-size: 16px;
+    font-weight: bold;
+}
+#bestiaryPopup {
+    background-color: #f5f0dc;
+    color: #3b2f2f;
+    border: 3px solid #d4af37;
+    border-radius: 15px;
+    padding: 20px;
+    min-width: 350px;
+    font-family: 'IM Fell English SC', serif;
+}
+
+#bestiaryPopup h2 {
+    color: #b8860b;
+    text-align: center;
+}
+
+
+</style>
+</head>
+<body>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- PAGES -->
+<div class="login-container" id="loginPage">
+    <h1>Popote & Dragons</h1>
+    <button id="createBtn">Créer un compte</button>
+    <button id="loginBtn">Connexion</button>
+
+    <div class="login-footer">
+        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 017
+    </div>
+</div>
+
+
+<!-- ===== MAISON ET BANQUE ===== -->
+<div class="village-container" id="villagePage" style="display:none;">
+    <!-- IMAGE HEADER -->
+    <div class="village-header">
+        <img src="village1.png" alt="Maison Fantasy" id="villageImage">
+        <h1>Maison</h1>
+    </div>
+
+    <div class="village-main">
+        <!-- INFOS JOUEUR -->
+        <div class="player-panel">
+            <h2 id="welcomeText">Bienvenue, aventurier.</h2>
+            <p id="teamText"></p>
+            <p id="levelText"></p>
+            <p id="xpText"></p>
+        </div>
+
+        <!-- BOUTONS ACTIONS -->
+        <div class="actions-panel">
+            <button id="upgradeHouseBtn">🏠 Améliorer l'habitation</button>
+            <button id="openCharacterSheetBtn">📝 Fiche</button>
+            <button id="exploreBtn">🌳 Explorer</button>
+            <button id="bestiaryBtn">📖 Bestiaire</button>
+            <button id="inventoryBtn">🎒 Inventaire</button>
+            <button id="logoutBtn">🚪 Déconnexion</button>
+            <button id="adminBtn" style="display:none;">⚔️ Admin</button>
+        </div>
+
+        <!-- POPUP AMÉLIORATION MAISON -->
+        <div class="popup" id="upgradeHousePopup">
+            <h2>Améliorer votre maison</h2>
+            <p id="currentHouse"></p>
+            <p id="nextHouse"></p>
+
+            <div id="houseProgress" style="width:100%; background:#ddd; border-radius:8px; height:12px; margin:10px auto;">
+              <div id="houseProgressFill" style="width:0%; background:#d4af37; height:100%; border-radius:8px;"></div>
+            </div>
+
+            <button id="confirmUpgradeBtn">Améliorer</button>
+            <button id="cancelUpgradeBtn">Annuler</button>
+        </div>
+    </div>
+ <!-- BANQUE -->
+    <div class="bank-dashboard">
+        <h3>🏦 Banque</h3>
+        <div class="bank-row gold-row">
+            <span class="bank-label">Sous actuels</span>
+            <span class="bank-value" id="bankGold">0</span>
+        </div>
+        <div class="bank-row house-row">
+            <span class="bank-label">🏠 Dépenses Maison</span>
+            <span class="bank-value" id="bankHouse">0</span>
+        </div>
+        <div class="bank-row village-row">
+            <span class="bank-label">🏘️ Dépenses Village</span>
+            <span class="bank-value" id="bankVillage">0</span>
+        </div>
+    </div>
+</div>
+
+<!-- OVERLAY UNIQUE -->
+<div class="overlay" id="overlay" style="display:none;"></div>
+
+
+
+
+<!-- POPUPS -->
+<div class="popup" id="adminPopup">
+    <h2>⚔️ Panel Admin ⚔️</h2>
+    <div id="adminPlayersList" style="margin-top:10px;"></div>
+    <p>Bienvenue, Maître du Donjon.</p>
+    <button id="adminClose">Fermer</button>
+</div>
+
+<div class="popup" id="createPopup">
+    <h2>Créer un compte</h2>
+    <input type="email" id="createEmail" placeholder="Adresse email">
+    <input type="password" id="createPassword" placeholder="Mot de passe">
+    <button id="createSubmit">Valider</button>
+    <button id="createBack">Retour</button>
+</div>
+
+<div class="popup" id="loginPopup">
+    <h2>Connexion</h2>
+    <input type="email" id="loginEmail" placeholder="Adresse email">
+    <input type="password" id="loginPassword" placeholder="Mot de passe">
+    <button id="loginSubmit">Se connecter</button>
+    <button id="loginBack">Retour</button>
+</div>
+
+<div class="popup" id="characterPopup">
+    <h2>Viens prendre part à cette aventure</h2>
+    <input type="text" id="characterName" placeholder="Nom du personnage">
+    <select id="characterClass">
+        <option value="">-- Classe --</option>
+        <option>Guerrier</option>
+        <option>Voleur</option>
+        <option>Mage</option>
+        <option>Nécromancien</option>
+        <option>Archer</option>
+        
+    </select>
+    <p>Points de compétence restants : <span id="pointsRestants">10</span></p>
+    <label>Attaque</label><input type="number" id="statAttaque" min="0" value="0">
+    <label>Défense</label><input type="number" id="statDefense" min="0" value="0">
+    <label>Esquive</label><input type="number" id="statEsquive" min="0" value="0">
+    <label>Points de vie</label><input type="number" id="statVie" min="0" value="0">
+    <button id="characterSubmit">Entrer dans le monde</button>
+</div>
+
+
+
+<div class="popup" id="characterSheetPopup">
+    <h2>🛡️ Fiche Personnage 🗡️</h2>
+
+    <!-- INFOS GÉNÉRALES -->
+    <p id="sheetClass"></p>
+    <p id="sheetTeam"></p>
+    <p id="sheetLevel"></p>
+
+    <p id="pcText" data-pc="0">Points de Compétence restants : 0</p>
+
+    <!-- STATS + / - -->
+    <div class="stat-row">
+        <span>Attaque: </span>
+        <button class="dec" data-stat="attaque">-</button>
+        <span id="sheetAttaque">0</span>
+        <button class="inc" data-stat="attaque">+</button>
+    </div>
+    <div class="stat-row">
+        <span>Défense: </span>
+        <button class="dec" data-stat="defense">-</button>
+        <span id="sheetDefense">0</span>
+        <button class="inc" data-stat="defense">+</button>
+    </div>
+    <div class="stat-row">
+        <span>Esquive: </span>
+        <button class="dec" data-stat="esquive">-</button>
+        <span id="sheetEsquive">0</span>
+        <button class="inc" data-stat="esquive">+</button>
+    </div>
+    <div class="stat-row">
+        <span>Vie: </span>
+        <button class="dec" data-stat="vie">-</button>
+        <span id="sheetVie">0</span>
+        <button class="inc" data-stat="vie">+</button>
+    </div>
+
+    <button id="saveStatsBtn">Valider</button>
+    <button id="cancelStatsBtn">Annuler</button>
+</div>
+
+
+<div class="overlay" id="overlay"></div>
+
+<div class="popup" id="explorePopup">
+    <h2 id="exploreTitle">🌳 Exploration</h2>
+    <div id="exploreContent" style="text-align:center; font-size:1.1em; margin:10px 0;"></div>
+    <div style="display:flex; justify-content:center; gap:10px; margin-top:15px;">
+        <button id="exploreNext">⚔️ Combat suivant</button>
+        <button id="exploreClose">❌ Fermer</button>
+    </div>
+</div>
+<div class="popup" id="bestiaryPopup">
+    <h2>📖 Bestiaire</h2>
+    <div id="bestiaryContent" style="max-height:400px; overflow-y:auto; text-align:left;"></div>
+    <button id="closeBestiary">Fermer</button>
+</div>
+
+
+<script>
+// ===== CONFIG FIREBASE =====
+const firebaseConfig = {
+  apiKey: "AIzaSyDxSVEnK9stHRQxF-WEUAaVQ5OjM1jqmXU",
+  authDomain: "popoteetdragonv2.firebaseapp.com",
+  projectId: "popoteetdragonv2",
+  storageBucket: "popoteetdragonv2.firebasestorage.app",
+  messagingSenderId: "1012170229310",
+  appId: "1:1012170229310:web:4914b80585158c0c42736f"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+// Fonction utilitaire pour assigner un onclick en toute sécurité
+function safeOnClick(id, callback){
+    const el = document.getElementById(id);
+    if(el) el.onclick = callback;
+}
+
+let bank = { gold:0, houseSpent:0, villageSpent:0 };
+
+// Fonction pour mettre à jour la banque
+function updateBankDisplay(playerData){
+    if(playerData && playerData.character){
+        bank.gold = playerData.character.gold || 0;
+        bank.houseSpent = playerData.character.spentHouse || 0;
+        bank.villageSpent = playerData.character.spentVillage || 0;
+    }
+
+    const goldEl = document.getElementById('bankGold');
+    const houseEl = document.getElementById('bankHouse');
+    const villageEl = document.getElementById('bankVillage');
+
+    if(goldEl) goldEl.textContent = bank.gold;
+    if(houseEl) houseEl.textContent = bank.houseSpent;
+    if(villageEl) villageEl.textContent = bank.villageSpent;
+}
+
+// ===== AMÉLIORER MAISON =====
+const upgradeHouseBtn = document.getElementById('upgradeHouseBtn');
+const upgradeHousePopup = document.getElementById('upgradeHousePopup');
+const confirmUpgradeBtn = document.getElementById('confirmUpgradeBtn');
+const cancelUpgradeBtn = document.getElementById('cancelUpgradeBtn');
+const currentHouseP = document.getElementById('currentHouse');
+const nextHouseP = document.getElementById('nextHouse');
+
+const houses = [
+    {name:"Tente", defense:3, cost:0},
+    {name:"Cabane", defense:6, cost:10},
+    {name:"Chaumière", defense:9, cost:20},
+    {name:"Maison", defense:12, cost:40},
+    {name:"Grande Maison", defense:15, cost:80},
+    {name:"Manoir", defense:18, cost:160},
+    {name:"Villa", defense:21, cost:320},
+    {name:"Domaine", defense:24, cost:640},
+    {name:"Palais", defense:27, cost:1280},
+    {name:"Château", defense:30, cost:2560},
+];
+
+// Ouvrir popup
+if(upgradeHouseBtn) upgradeHouseBtn.onclick = async () => {
+    const doc = await db.collection('players').doc(currentUser).get();
+    const player = doc.data();
+    if(!player.houseLevel) player.houseLevel = 0;
+    const currentLevel = player.houseLevel;
+    const nextLevel = currentLevel < houses.length - 1 ? currentLevel + 1 : currentLevel;
+
+    currentHouseP.textContent = `🏠 Maison actuelle : ${houses[currentLevel].name} (Défense: ${houses[currentLevel].defense})`;
+    if(currentLevel === nextLevel){
+        nextHouseP.textContent = "Vous avez déjà le maximum !";
+        confirmUpgradeBtn.style.display = 'none';
+    } else {
+        nextHouseP.textContent = `🛡 Prochaine amélioration : ${houses[nextLevel].name} (Défense: ${houses[nextLevel].defense}, Coût: ${houses[nextLevel].cost} sous)`;
+        confirmUpgradeBtn.style.display = 'inline-block';
+    }
+    overlay.style.display = 'block';
+    upgradeHousePopup.style.display = 'block';
+};
+
+// Fermer popup
+if(cancelUpgradeBtn) cancelUpgradeBtn.onclick = () => {
+    overlay.style.display = 'none';
+    upgradeHousePopup.style.display = 'none';
+};
+
+// Confirmer amélioration
+if(confirmUpgradeBtn) confirmUpgradeBtn.onclick = async () => {
+    const doc = await db.collection('players').doc(currentUser).get();
+    const player = doc.data();
+    if(!player.houseLevel) player.houseLevel = 0;
+    const currentLevel = player.houseLevel;
+    const nextLevel = currentLevel + 1;
+
+    if(nextLevel >= houses.length){
+        alert("Vous avez déjà le niveau maximum !");
+        return;
+    }
+
+    const cost = houses[nextLevel].cost;
+    if(!player.character.gold) player.character.gold = 0;
+    if(!player.character.spentHouse) player.character.spentHouse = 0;
+
+    if(player.character.gold < cost){
+        alert(`Pas assez d'argent ! Il vous faut ${cost} sous.`);
+        return;
+    }
+
+    const newGold = player.character.gold - cost;
+    const newSpentHouse = player.character.spentHouse + cost;
+
+    await db.collection('players').doc(currentUser).update({
+        houseLevel: nextLevel,
+        "character.gold": newGold,
+        "character.spentHouse": newSpentHouse
+    });
+
+    alert(`🏠 Maison améliorée : ${houses[nextLevel].name} !`);
+    overlay.style.display = 'none';
+    upgradeHousePopup.style.display = 'none';
+
+    // Mise à jour banque
+    updateBankDisplay(await db.collection('players').doc(currentUser).get().then(d=>d.data()));
+};
+// ===== GARDER L'UTILISATEUR CONNECTÉ APRÈS REFRESH =====
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        // Utilisateur connecté
+        currentUser = user.uid;
+        
+
+        // Récupère les données du joueur
+        const doc = await db.collection('players').doc(currentUser).get();
+        let data = doc.exists ? doc.data() : {character:null, level:1, xp:0};
+
+
+// --- Chargement de la banque ---
+// Après avoir récupéré les données du joueur
+if(data.character){
+    bank.gold = data.character.gold || 0;
+    bank.houseSpent = data.character.spentHouse || 0;
+    bank.villageSpent = data.character.spentVillage || 0;
+    updateBankDisplay();
+}
+
+
+
+        // Affichage selon si personnage existant ou non
+        if(data.character){
+            villagePage.style.display = 'block';
+            loginPage.style.display = 'none';
+            welcomeText.textContent = `Bienvenue ${data.character.name}, ${data.character.classe}.`;
+            teamText.textContent = `Équipe : ${data.character.team}`;
+            levelText.textContent = `Niveau : ${data.level || 1}`;
+            xpText.textContent = `XP : ${data.xp || 0} / ${10*(data.level || 1)}`;
+        } else {
+            overlay.style.display='block';
+            characterPopup.style.display='block';
+            updateBankDisplay();
+
+        }
+// Initialisation des boutons du bestiaire
+document.getElementById('bestiaryBtn').onclick = openBestiary;
+document.getElementById('closeBestiary').onclick = () => {
+    overlay.style.display = 'none';
+    document.getElementById('bestiaryPopup').style.display = 'none';
+};
+
+        // Affiche bouton admin si nécessaire
+        adminBtn.style.display = user.email === adminEmail ? 'inline-block' : 'none';
+
+    } else {
+        // Pas d'utilisateur connecté
+        currentUser = null;
+        villagePage.style.display = 'none';
+        loginPage.style.display = 'block';
+        adminBtn.style.display = 'none';
+        teamText.textContent = '';
+    }
+});
+
+// ===== VARIABLES =====
+let currentUser = null;
+let teamToggle = 0;
+const creationPointsRestants = 10;
+const adminEmail = "pierre.valentin8@gmail.com";
+
+// Éléments DOM
+const overlay = document.getElementById('overlay');
+const loginPage = document.getElementById('loginPage');
+const villagePage = document.getElementById('villagePage');
+const createPopup = document.getElementById('createPopup');
+const loginPopup = document.getElementById('loginPopup');
+const characterPopup = document.getElementById('characterPopup');
+
+const statAttaque = document.getElementById('statAttaque');
+const statDefense = document.getElementById('statDefense');
+const statEsquive = document.getElementById('statEsquive');
+const statVie = document.getElementById('statVie');
+const pointsRestantsSpan = document.getElementById('pointsRestants');
+
+const characterSheetPopup = document.getElementById('characterSheetPopup');
+const pcText = document.getElementById('pcText');
+const sheetAttaque = document.getElementById('sheetAttaque');
+const sheetDefense = document.getElementById('sheetDefense');
+const sheetEsquive = document.getElementById('sheetEsquive');
+const sheetVie = document.getElementById('sheetVie');
+const saveStatsBtn = document.getElementById('saveStatsBtn');
+const cancelStatsBtn = document.getElementById('cancelStatsBtn');
+
+function updateSheetPoints(){
+    const remaining = parseInt(pcText.dataset.pc) || 0;
+
+    pcText.textContent = `Points de Compétence restants : ${remaining}`;
+    pcText.style.color = remaining === 0 ? "red" : "#3b2f2f"; // marron foncé
+}
+
+// ========================
+// Gestion + / - des stats
+// ========================
+const statsElems = {
+    attaque: document.getElementById('sheetAttaque'),
+    defense: document.getElementById('sheetDefense'),
+    esquive: document.getElementById('sheetEsquive'),
+    vie: document.getElementById('sheetVie')
+};
+
+document.querySelectorAll('.stat-row .inc').forEach(btn=>{
+    btn.onclick = () => {
+        const stat = btn.dataset.stat;
+        let val = parseInt(statsElems[stat].textContent) || 0;
+
+        // points libres restants
+        let remaining = parseInt(pcText.dataset.pc) || 0;
+        if(remaining <= 0) return; // plus de points dispo, bloque le +
+
+        // incrémente la stat
+        statsElems[stat].textContent = val + 1;
+
+        // décrémente les PC restants
+        pcText.dataset.pc = remaining - 1;
+
+        // met à jour affichage
+        updateSheetPoints();
+    };
+});
+
+document.querySelectorAll('.stat-row .dec').forEach(btn=>{
+    btn.onclick = () => {
+        const stat = btn.dataset.stat;
+        const classe = document.getElementById('sheetClass').textContent.split(' ')[2]; 
+        const minValue = classBaseStats[classe]?.[stat] || 0;
+
+        let val = parseInt(statsElems[stat].textContent) || 0;
+        if(val > minValue){
+            // décrémente la stat
+            statsElems[stat].textContent = val - 1;
+
+            // libère un point
+            let remaining = parseInt(pcText.dataset.pc) || 0;
+            pcText.dataset.pc = remaining + 1;
+
+            // met à jour affichage
+            updateSheetPoints();
+        }
+    };
+});
+
+
+
+// ========================
+// Met à jour le compteur PC et points restants du player
+// ========================
+function updateSheetPoints(){
+    const attaque = parseInt(sheetAttaque.textContent) || 0;
+    const defense = parseInt(sheetDefense.textContent) || 0;
+    const esquive = parseInt(sheetEsquive.textContent) || 0;
+    const vie = parseInt(sheetVie.textContent) || 0;
+
+    // total PC attribuables
+    const totalPc = parseInt(pcText.dataset.totalPc) || 0;
+
+    // points utilisés
+    const used = attaque + defense + esquive + vie;
+
+    // points restants
+    let remaining = totalPc - used;
+    if(remaining < 0) remaining = 0;
+
+    // met à jour le dataset et l'affichage
+    pcText.dataset.pc = remaining; // <- très important
+    pcText.textContent = `Points de Compétence restants : ${remaining}`;
+    pcText.style.color = remaining === 0 ? "red" : "#3b2f2f"; // marron foncé visible
+}
+
+
+
+
+
+
+// ========================
+// Cancel bouton
+// ========================
+cancelStatsBtn.onclick = () => {
+    overlay.style.display='none';
+    characterSheetPopup.style.display='none';
+};
+
+// ========================
+// Save stats
+// ========================
+saveStatsBtn.onclick = async () => {
+    const attaque = parseInt(statsElems.attaque.textContent) || 0;
+    const defense = parseInt(statsElems.defense.textContent) || 0;
+    const esquive = parseInt(statsElems.esquive.textContent) || 0;
+    const vie = parseInt(statsElems.vie.textContent) || 0;
+
+    const totalUsed = attaque + defense + esquive + vie;
+    const totalPc = parseInt(pcText.dataset.totalPc);
+
+    if(totalUsed > totalPc){
+        alert("Vous avez dépassé vos points de compétence !");
+        return;
+    }
+
+    await db.collection('players').doc(currentUser).update({
+        "character.stats.attaque": attaque,
+        "character.stats.defense": defense,
+        "character.stats.esquive": esquive,
+        "character.stats.vie": vie,
+        "character.stats.pointsRestants": totalPc - totalUsed
+    });
+
+    alert("Stats mises à jour !");
+    overlay.style.display='none';
+    characterSheetPopup.style.display='none';
+};
+
+const adminBtn = document.getElementById('adminBtn');
+const adminPopup = document.getElementById('adminPopup');
+const adminClose = document.getElementById('adminClose');
+const adminPlayersList = document.getElementById('adminPlayersList');
+
+// ===== FONCTIONS POPUPS =====
+function closeAllPopups(){
+    overlay.style.display = 'none';
+    createPopup.style.display = 'none';
+    loginPopup.style.display = 'none';
+    characterPopup.style.display = 'none';
+    characterSheetPopup.style.display = 'none';
+    adminPopup.style.display = 'none';
+}
+function showPopup(id){
+    overlay.style.display = 'block';
+    document.getElementById(id).style.display = 'block';
+}
+
+// ===== POINTS COMPÉTENCE CREATION =====
+function updateCreationPoints(){
+    const used = (parseInt(statAttaque.value)||0) + (parseInt(statDefense.value)||0) + (parseInt(statEsquive.value)||0) + (parseInt(statVie.value)||0);
+    const remaining = creationPointsRestants - used;
+    pointsRestantsSpan.textContent = remaining >= 0 ? remaining : 0;
+    if(remaining < 0){ alert("Vous ne pouvez pas dépasser vos 10 points de compétence !"); }
+}
+statAttaque.oninput = statDefense.oninput = statEsquive.oninput = statVie.oninput = updateCreationPoints;
+
+// ===== FONCTIONS FICHE PERSONNAGE =====
+function openCharacterSheet(playerData){
+    const stats = playerData.character.stats || {attaque:0, defense:0, esquive:0, vie:0, pointsRestants:10};
+    const classe = playerData.character.classe;
+    const base = classBaseStats[classe] || {attaque:0, defense:0, esquive:0, vie:0};
+
+    // Initialisation points à attribuer si undefined
+    if(stats.pointsRestants === undefined) stats.pointsRestants = 10;
+
+    pcText.dataset.totalPc = stats.pointsRestants; // <- total PC à attribuer
+    pcText.dataset.pc = stats.pointsRestants;
+
+    // Affichage stats avec bonus classe
+    sheetAttaque.textContent = stats.attaque + base.attaque;
+    sheetDefense.textContent = stats.defense + base.defense;
+    sheetEsquive.textContent = stats.esquive + base.esquive;
+    sheetVie.textContent = stats.vie + base.vie;
+
+    document.getElementById('sheetClass').textContent =
+        `Classe : ${classe} (Bonus → ATK:${base.attaque} DEF:${base.defense} ESG:${base.esquive} VIE:${base.vie})`;
+
+    document.getElementById('sheetTeam').textContent = `Équipe : ${playerData.character.team}`;
+    document.getElementById('sheetLevel').textContent = `Niveau : ${playerData.level || 1}`;
+
+    updateSheetPoints();
+
+    overlay.style.display = 'block';
+    characterSheetPopup.style.display = 'block';
+}
+
+function changeStat(statName, delta) {
+    const stats = playerData.character.stats;
+    const classe = playerData.character.classe;
+    const base = classBaseStats[classe] || {attaque:0, defense:0, esquive:0, vie:0};
+
+    // Calcul valeur actuelle du joueur (hors bonus classe)
+    const current = stats[statName] || 0;
+
+    if (delta < 0) {
+        // Empêche de descendre sous le minimum obligatoire
+        if (current + delta < 0) return; 
+    }
+
+    // Vérifie qu'on a assez de points restants
+    if (delta > 0 && stats.pointsRestants < delta) return;
+
+    // Applique la modification
+    stats[statName] = current + delta;
+    stats.pointsRestants = (stats.pointsRestants || 0) - delta;
+
+    // Met à jour l'affichage
+    openCharacterSheet(playerData);
+}
+
+
+
+
+
+
+
+
+function updateSheetPoints(){
+    const attaque = parseInt(sheetAttaque.textContent) || 0;
+const defense = parseInt(sheetDefense.textContent) || 0;
+const esquive = parseInt(sheetEsquive.textContent) || 0;
+const vie = parseInt(sheetVie.textContent) || 0;
+
+
+    const used = attaque + defense + esquive + vie;
+    const totalPc = parseInt(pcText.dataset.totalPc) || 0;
+
+    let remaining = totalPc - used;
+
+    // Bloque si plus de points disponibles
+    if(remaining < 0) remaining = 0;
+
+    pcText.textContent = `Points de Compétence restants : ${remaining}`;
+    pcText.style.color = remaining === 0 ? "red" : "#f5f5dc";
+}
+
+
+
+
+sheetAttaque.oninput = sheetDefense.oninput = sheetEsquive.oninput = sheetVie.oninput = updateSheetPoints;
+
+cancelStatsBtn.onclick = () => { overlay.style.display='none'; characterSheetPopup.style.display='none'; };
+
+safeOnClick('saveStatsBtn', async () => {
+    const attaque = parseInt(sheetAttaque.textContent) || 0;
+    const defense = parseInt(sheetDefense.textContent) || 0;
+    const esquive = parseInt(sheetEsquive.textContent) || 0;
+    const vie = parseInt(sheetVie.textContent) || 0;
+
+    const used = attaque + defense + esquive + vie;
+    const totalPc = parseInt(pcText.dataset.totalPc) || 0;
+    const remaining = totalPc - used;
+
+    if(remaining < 0){
+        alert("Vous avez dépassé vos points de compétence !");
+        return;
+    }
+
+    await db.collection('players').doc(currentUser).update({
+        "character.stats": { attaque, defense, esquive, vie, pointsRestants: remaining }
+    });
+
+    pcText.dataset.pc = remaining;
+    pcText.textContent = `Points de Compétence restants : ${remaining}`;
+    pcText.style.color = remaining === 0 ? "red" : "#f5f5dc";
+
+    alert("Stats mises à jour !");
+    overlay.style.display = 'none';
+    characterSheetPopup.style.display = 'none';
+});
+
+safeOnClick('cancelStatsBtn', () => {
+    overlay.style.display='none';
+    characterSheetPopup.style.display='none';
+});
+
+
+
+
+// ===== ADMIN =====
+adminBtn.onclick = async () => {
+    overlay.style.display = 'block';
+    adminPopup.style.display = 'block';
+    adminPlayersList.innerHTML = '';
+
+    // Création du tableau
+    const table = document.createElement('table');
+
+    // Entête
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+        <tr style="background-color:#d4af37;color:#000;">
+            <th>Nom</th>
+            <th>Classe</th>
+            <th>Équipe</th>
+            <th>Niveau</th>
+            <th>XP</th>
+            <th>Actions</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    const snapshot = await db.collection('players').get();
+
+    snapshot.forEach(docSnap => {
+        const player = docSnap.data();
+        const uid = docSnap.id;
+
+        const tr = document.createElement('tr');
+
+        if(player.character){
+            // Nom
+            const tdName = document.createElement('td');
+            const nameInput = document.createElement('input');
+            nameInput.value = player.character.name || '';
+            nameInput.style.width = '90%';
+            tdName.appendChild(nameInput);
+            tr.appendChild(tdName);
+
+            // Classe
+            const tdClass = document.createElement('td');
+            const classSelect = document.createElement('select');
+            ['Guerrier','Voleur','Mage','Nécromancien','Archer'].forEach(c=>{
+                const opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                classSelect.appendChild(opt);
+            });
+            classSelect.value = player.character.classe || '';
+            tdClass.appendChild(classSelect);
+            tr.appendChild(tdClass);
+
+            // Équipe
+            const tdTeam = document.createElement('td');
+            const teamSelect = document.createElement('select');
+            teamSelect.innerHTML = `
+                <option value="Ordre du Dragon Pourpre ⚔️">Ordre du Dragon Pourpre ⚔️</option>
+                <option value="Confrérie du Serpent Noir 🐍">Confrérie du Serpent Noir 🐍</option>
+            `;
+            teamSelect.value = player.character.team || "Ordre du Dragon Pourpre ⚔️";
+            tdTeam.appendChild(teamSelect);
+            tr.appendChild(tdTeam);
+
+            // Niveau
+            const tdLevel = document.createElement('td');
+            tdLevel.textContent = player.level || 1;
+            tr.appendChild(tdLevel);
+
+            // XP
+            const tdXP = document.createElement('td');
+            tdXP.textContent = player.xp || 0;
+            tr.appendChild(tdXP);
+
+            // Actions
+            const tdActions = document.createElement('td');
+
+            // Enregistrer
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = '💾';
+            saveBtn.onclick = async () => {
+                await db.collection('players').doc(uid).update({
+                    "character.name": nameInput.value,
+                    "character.classe": classSelect.value,
+                    "character.team": teamSelect.value
+                });
+                if(currentUser === uid) showVillageForCurrentUser(teamSelect.value);
+                adminHandler(); // refresh
+                alert('Modifications enregistrées !');
+            };
+            tdActions.appendChild(saveBtn);
+
+            // Supprimer
+            const delBtn = document.createElement('button');
+            delBtn.textContent = '🗑️';
+            delBtn.onclick = async () => {
+                if(confirm(`Supprimer ${player.character.name} ?`)){
+                    await db.collection('players').doc(uid).update({ character: null });
+                    adminHandler();
+                    alert('Personnage supprimé');
+                }
+            };
+            tdActions.appendChild(delBtn);
+
+            // Donner XP
+            const xpBtn = document.createElement('button');
+            xpBtn.textContent = '✨';
+            xpBtn.onclick = async () => {
+                const amount = parseInt(prompt("Combien d'XP donner ?"));
+                if(!amount || amount <= 0) return;
+                await giveXpToPlayer(uid, player, amount);
+                alert(`${amount} XP accordée`);
+                adminHandler();
+            };
+            tdActions.appendChild(xpBtn);
+
+            tr.appendChild(tdActions);
+
+        } else {
+            const td = document.createElement('td');
+            td.colSpan = 6;
+            td.textContent = 'Pas de personnage';
+            td.style.textAlign = 'center';
+            tr.appendChild(td);
+        }
+
+        tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    adminPlayersList.appendChild(table);
+
+
+    // ===== Réparer le bouton fermer =====
+    adminClose.onclick = () => {
+        overlay.style.display = 'none';
+        adminPopup.style.display = 'none';
+    };
+}
+
+adminClose.onclick = () => { overlay.style.display='none'; adminPopup.style.display='none'; };
+
+// ===== FONCTION XP =====
+async function giveXpToPlayer(uid,player,xpGained){
+    if(!player.character){ alert("Pas de personnage !"); return; }
+    if(!player.character.stats) player.character.stats={attaque:0,defense:0,esquive:0,vie:0,pointsRestants:0};
+    let xp=player.xp||0;
+    let level=player.level||1;
+    let stats=player.character.stats;
+    xp+=xpGained;
+    let leveledUp=false;
+    let nextLevelXp=10*level;
+    while(xp>=nextLevelXp){
+        xp-=nextLevelXp;
+        level++;
+        stats.pointsRestants+=1;
+        leveledUp=true;
+        nextLevelXp=10*level;
+    }
+    await db.collection('players').doc(uid).update({xp:xp,level:level,"character.stats":stats});
+    if(leveledUp) alert(`🎉 ${player.character.name} monte niveau ${level} ! (+1 PC)`);
+}
+
+// ===== POPUPS BOUTONS =====
+safeOnClick('createBtn', () => { overlay.style.display='block'; createPopup.style.display='block'; });
+safeOnClick('loginBtn', () => { overlay.style.display='block'; loginPopup.style.display='block'; });
+safeOnClick('createBack', closeAllPopups);
+safeOnClick('loginBack', closeAllPopups);
+
+overlay.onclick=closeAllPopups;
+
+// ===== CREATION COMPTE =====
+safeOnClick('createSubmit', async () => {
+    const email = createEmail.value;
+    const password = createPassword.value;
+    if(email && password){
+        try {
+            const userCredential = await auth.createUserWithEmailAndPassword(email,password);
+            await db.collection('players').doc(userCredential.user.uid).set({character:null});
+            alert("Compte créé !");
+            closeAllPopups();
+        } catch(e) {
+            alert(e.message);
+        }
+    }
+});
+
+safeOnClick('loginSubmit', async () => {
+    const email = loginEmail.value;
+    const password = loginPassword.value;
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        currentUser = userCredential.user.uid;
+        const doc = await db.collection('players').doc(currentUser).get();
+        if(!doc.exists) await db.collection('players').doc(currentUser).set({character:null,level:1,xp:0});
+        closeAllPopups();
+    } catch(e) {
+        alert("Erreur : " + e.message);
+    }
+});
+
+
+// ===== CONNEXION =====
+document.getElementById('loginSubmit').onclick = async () => {
+    const email = loginEmail.value;
+    const password = loginPassword.value;
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        currentUser = userCredential.user.uid;
+
+        // Crée le joueur si inexistant
+        const doc = await db.collection('players').doc(currentUser).get();
+        if(!doc.exists) await db.collection('players').doc(currentUser).set({character:null,level:1,xp:0});
+
+        closeAllPopups(); // ferme la popup login
+
+        // Le reste (affichage village, fiche personnage, admin) est géré automatiquement par onAuthStateChanged
+    } catch(e) {
+        alert("Erreur : " + e.message);
+    }
+};
+
+
+// ===== CREATION PERSONNAGE =====
+safeOnClick('characterSubmit', async () => {
+    const name = characterName.value;
+    const classe = characterClass.value;
+
+    const attaque = parseInt(statAttaque.value) || 0;
+    const defense = parseInt(statDefense.value) || 0;
+    const esquive = parseInt(statEsquive.value) || 0;
+    const vie = parseInt(statVie.value) || 0;
+
+    const totalUsed = attaque + defense + esquive + vie;
+    if(totalUsed > creationPointsRestants){
+        alert("Vous avez dépassé vos 10 points !");
+        return;
+    }
+
+    const team = teamToggle === 0
+        ? 'L’Ordre du Dragon Pourpre ⚔️'
+        : 'La Confrérie du Serpent Noir 🐍';
+    teamToggle = teamToggle === 0 ? 1 : 0;
+
+    const finalStats = { attaque, defense, esquive, vie, pointsRestants: creationPointsRestants - totalUsed };
+
+    await db.collection('players').doc(currentUser).set({
+        character: { name, classe, team, stats: finalStats, gold:0, houseLevel:0 },
+        level:1, xp:0
+    });
+
+    closeAllPopups();
+
+    welcomeText.textContent = `Bienvenue ${name}, ${classe}.`;
+    teamText.textContent = `Équipe : ${team}`;
+});
+
+
+
+
+// ===== DECONNEXION =====
+safeOnClick('logoutBtn', async () => {
+    await auth.signOut();
+    currentUser = null;
+    villagePage.style.display = 'none';
+    loginPage.style.display = 'block';
+    adminBtn.style.display = 'none';
+    teamText.textContent = '';
+});
+
+function getStatTotal(statName, playerStats, classBase) {
+    return (playerStats[statName] || 0) + (classBase[statName] || 0);
+}
+
+
+// ===== OUVRIR FICHE PERSONNAGE =====
+safeOnClick('openCharacterSheetBtn', async () => {
+    const playerDoc = await db.collection('players').doc(currentUser).get();
+    const data = playerDoc.data();
+    if(!data.character){
+        alert("Aucun personnage créé.");
+        return;
+    }
+    openCharacterSheet(data);
+});
+
+
+
+// Liste des ennemis PVE
+const enemies = [
+  { name: "Lapin", hp: 3, attack: 1, defense: 0, gold: 1 },
+  { name: "Rat", hp: 4, attack: 2, defense: 1, gold: 2 },
+  { name: "Corbeau", hp: 5, attack: 3, defense: 0, gold: 3 },
+  { name: "Gobelin", hp: 8, attack: 4, defense: 2, gold: 5 },
+  { name: "Kobold", hp: 10, attack: 5, defense: 3, gold: 6 },
+  { name: "Loup", hp: 12, attack: 6, defense: 4, gold: 8 },
+  { name: "Araignée géante", hp: 14, attack: 5, defense: 5, gold: 10 },
+  { name: "Orc", hp: 18, attack: 8, defense: 6, gold: 12 },
+  { name: "Troll", hp: 25, attack: 10, defense: 8, gold: 18 },
+  { name: "Squelette", hp: 15, attack: 7, defense: 5, gold: 10 },
+  { name: "Zombie", hp: 20, attack: 6, defense: 7, gold: 12 },
+  { name: "Ogre", hp: 30, attack: 12, defense: 10, gold: 20 },
+  { name: "Sorcière", hp: 18, attack: 14, defense: 5, gold: 25 },
+  { name: "Worg", hp: 22, attack: 11, defense: 7, gold: 18 },
+  { name: "Minotaure", hp: 35, attack: 15, defense: 12, gold: 30 },
+  { name: "Liche", hp: 28, attack: 18, defense: 8, gold: 40 },
+  { name: "Gargouille", hp: 32, attack: 12, defense: 15, gold: 35 },
+  { name: "Dragonnet", hp: 40, attack: 20, defense: 12, gold: 50 },
+  { name: "Wyverne", hp: 45, attack: 22, defense: 15, gold: 55 },
+  { name: "Hydre", hp: 50, attack: 18, defense: 20, gold: 60 },
+  { name: "Vampire", hp: 38, attack: 25, defense: 10, gold: 70 },
+  { name: "Démon mineur", hp: 42, attack: 23, defense: 15, gold: 65 },
+  { name: "Elementaire de feu", hp: 48, attack: 22, defense: 18, gold: 80 },
+  { name: "Elementaire d’eau", hp: 50, attack: 18, defense: 20, gold: 75 },
+  { name: "Elementaire de terre", hp: 55, attack: 20, defense: 22, gold: 90 },
+  { name: "Elementaire d’air", hp: 45, attack: 25, defense: 15, gold: 85 },
+  { name: "Dragon", hp: 60, attack: 28, defense: 20, gold: 100 },
+  { name: "Chimère", hp: 55, attack: 30, defense: 18, gold: 95 },
+  { name: "Succube", hp: 40, attack: 32, defense: 12, gold: 80 },
+  { name: "Harpie", hp: 38, attack: 28, defense: 10, gold: 70 },
+  { name: "Griffon", hp: 50, attack: 32, defense: 20, gold: 90 },
+  { name: "Kraken", hp: 80, attack: 35, defense: 25, gold: 150 },
+  { name: "Manticore", hp: 60, attack: 38, defense: 22, gold: 120 },
+  { name: "Sphinx", hp: 55, attack: 30, defense: 28, gold: 110 },
+  { name: "Démon majeur", hp: 65, attack: 40, defense: 25, gold: 130 },
+  { name: "Dragon adulte", hp: 70, attack: 45, defense: 35, gold: 150 },
+  { name: "Titan", hp: 85, attack: 50, defense: 40, gold: 200 },
+  { name: "Ancien Troll", hp: 75, attack: 48, defense: 38, gold: 180 },
+  { name: "Dragon noir", hp: 90, attack: 55, defense: 45, gold: 220 },
+  { name: "Dragon rouge", hp: 95, attack: 60, defense: 50, gold: 250 },
+  { name: "Balrog", hp: 100, attack: 70, defense: 60, gold: 300 },
+];
+const classBaseStats = {
+    "Guerrier": { attaque: 3, defense: 2, esquive: 0, vie: 2 },
+    "Voleur": { attaque: 1, defense: 1, esquive: 3, vie: 2 },
+    "Mage": { attaque: 4, defense: 0, esquive: 1, vie: 1 },
+    "Nécromancien": { attaque: 2, defense: 1, esquive: 1, vie: 3 },
+    "Archer": { attaque: 2, defense: 1, esquive: 2, vie: 2 }
+};
+
+async function explore() {
+
+    if(!currentUser){
+        alert("Connecte-toi d'abord !");
+        return;
+    }
+
+    const doc = await db.collection('players').doc(currentUser).get();
+    const data = doc.data();
+
+    if(!data.character){
+        alert("Aucun personnage !");
+        return;
+    }
+
+    const stats = data.character.stats;
+
+    const classe = data.character.classe;
+const base = classBaseStats[classe] || {attaque:0, defense:0, esquive:0, vie:0};
+
+const playerStats = {
+    hp: (stats.vie || 0) + base.vie,
+    attack: (stats.attaque || 0) + base.attaque,
+    defense: (stats.defense || 0) + base.defense,
+    dodge: (stats.esquive || 0) + base.esquive   // <- si tu utilises esquive
+};
+
+
+
+    const idx = Math.floor(Math.random() * enemies.length);
+    const monster = enemies[idx];
+// Enregistrement du monstre rencontré pour le bestiaire
+let encountered = data.encountered || [];
+
+if (!encountered.includes(monster.name)) {
+    encountered.push(monster.name);
+
+    await db.collection('players').doc(currentUser).update({
+        encountered: encountered
+    });
+}
+
+    const playerPower = playerStats.hp + playerStats.attack + playerStats.defense;
+    const monsterPower = monster.hp + monster.attack + monster.defense;
+
+    const contentDiv = document.getElementById('exploreContent');
+    contentDiv.innerHTML = '';
+
+    let monsterEmoji = '👾';
+    if(monster.name.toLowerCase().includes('lapin')) monsterEmoji='🐇';
+    else if(monster.name.toLowerCase().includes('rat')) monsterEmoji='🐀';
+    else if(monster.name.toLowerCase().includes('dragon')) monsterEmoji='🐉';
+    else if(monster.name.toLowerCase().includes('balrog')) monsterEmoji='🔥';
+
+    const img = document.createElement('div');
+    img.textContent = monsterEmoji;
+    img.style.fontSize = '60px';
+    contentDiv.appendChild(img);
+
+    const nameP = document.createElement('p');
+    nameP.textContent = `Tu rencontres : ${monster.name}`;
+    contentDiv.appendChild(nameP);
+
+    const resultP = document.createElement('p');
+
+    if(playerPower >= monsterPower){
+
+    resultP.innerHTML = `🎉 <b>Victoire !</b><br>Tu gagnes <b>${monster.gold} sous</b>.`;
+
+    let gold = data.character.gold || 0;
+    gold += monster.gold;
+
+    // Gestion du bestiaire
+    let metMonsters = data.character.metMonsters || [];
+
+    if(!metMonsters.includes(monster.name)){
+        metMonsters.push(monster.name);
+    }
+
+    await db.collection('players').doc(currentUser).update({
+        "character.gold": gold,
+        "character.metMonsters": metMonsters
+    });
+
+    const freshDoc = await db.collection('players').doc(currentUser).get();
+    updateBankDisplay(freshDoc.data());
+
+} else {
+    resultP.innerHTML = `💀 <b>Défaite !</b><br>Aucun gain.`;
+}
+
+contentDiv.appendChild(resultP);
+
+showPopup('explorePopup');
+
+    
+
+}
+
+
+// Boutons de la popup
+document.getElementById('exploreClose').onclick = () => {
+    overlay.style.display = 'none';
+    document.getElementById('explorePopup').style.display = 'none';
+};
+
+document.getElementById('exploreNext').onclick = () => {
+    explore(); // relance un nouveau combat
+};
+
+// Bouton explorer dans le village
+document.getElementById('exploreBtn').onclick = () => {
+    explore();
+};
+
+// Charger les données depuis Firestore si joueur connecté
+
+function upgradeHouse(cost) {
+    if (bank.gold >= cost) {
+        bank.gold -= cost;
+        bank.houseSpent += cost;
+        updateBankDisplay();
+
+        // Mise à jour Firestore
+        db.collection('players').doc(currentUser).update({
+            "character.gold": bank.gold,
+            "character.spentHouse": bank.houseSpent
+
+        });
+    } else {
+        alert("Pas assez de sous !");
+    }
+}
+
+function upgradeVillage(cost) {
+    if (bank.gold >= cost) {
+        bank.gold -= cost;
+        bank.villageSpent += cost;
+        updateBankDisplay();
+
+        db.collection('players').doc(currentUser).update({
+            "character.gold": bank.gold,
+            "character.villageSpent": bank.villageSpent
+        });
+    } else {
+        alert("Pas assez de sous !");
+    }
+}
+document.getElementById('exploreBtn').onclick = explore;
+
+
+// ===== BESTIAIRE =====
+
+// Associe un emoji à chaque monstre selon son nom
+function getMonsterEmoji(name) {
+    name = name.toLowerCase();
+    if (name.includes('lapin')) return '🐇';
+    if (name.includes('rat')) return '🐀';
+    if (name.includes('dragon')) return '🐉';
+    if (name.includes('balrog')) return '🔥';
+    if (name.includes('loup')) return '🐺';
+    if (name.includes('araignée')) return '🕷️';
+    if (name.includes('orque')) return '🧌';
+    if (name.includes('squelette')) return '💀';
+    if (name.includes('vampire')) return '🧛';
+    if (name.includes('hydre')) return '🐍';
+    return '👾';
+}
+
+async function openBestiary() {
+    if (!currentUser) return;
+
+    const doc = await db.collection('players').doc(currentUser).get();
+    const data = doc.data();
+
+    // Récupération des monstres rencontrés
+    const met = data.character.metMonsters || [];
+
+    const total = enemies.length;
+    const count = met.length;
+
+    const content = document.getElementById('bestiaryContent');
+
+    // Titre avec compteur
+    content.innerHTML = `<h2>📖 Bestiaire – ${count} / ${total}</h2>`;
+
+    enemies.forEach(monster => {
+
+    const line = document.createElement('p');
+
+    const emoji = getMonsterEmoji(monster.name);
+
+    const seen = met.includes(monster.name);
+
+    line.innerHTML = `${emoji} <b>${monster.name}</b> – Récompense : ${monster.gold} sous`;
+
+    if(!seen){
+        line.style.opacity = "0.4";
+    }
+
+    bestiaryContent.appendChild(line);
+});
+
+
+    overlay.style.display = 'block';
+    document.getElementById('bestiaryPopup').style.display = 'block';
+}
+
+
+
+
+
+</script>
+
+</body>
+</html>
