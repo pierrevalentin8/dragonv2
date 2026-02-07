@@ -751,7 +751,7 @@ button:active{ transform: translateY(1px); }
     <button id="loginBtn">Connexion</button>
 
     <div class="login-footer">
-        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 029
+        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 031
     </div>
 </div>
 
@@ -826,23 +826,131 @@ button:active{ transform: translateY(1px); }
 
 
 <!-- POPUPS -->
-<div class="popup" id="adminPopup">
-    <div class="popup-header">
-  <div class="popup-title">
-    <div class="popup-icon">⚔️</div>
-    <div>
-      <h2 style="margin:0;">Panel Admin</h2>
-      <div class="popup-subtitle">Gestion des joueurs & des créatures</div>
+<div class="popup" id="adminPopup" style="display:none;">
+  <div class="popup-header">
+    <div class="popup-title">
+      <div class="popup-icon">⚔️</div>
+      <div>
+        <h2 style="margin:0;">Panel Admin</h2>
+        <div class="popup-subtitle">Gestion</div>
+      </div>
     </div>
   </div>
+
+  <div class="gold-rule"></div>
+
+  <!-- MENU PRINCIPAL -->
+  <div class="toolbar" style="justify-content:center; gap:10px; flex-wrap:wrap;">
+    <button id="adminPlayersMainBtn" class="btn-primary" type="button">👤 Joueurs</button>
+    <button id="adminMonstersMainBtn" class="btn-primary" type="button">🧟 Créatures</button>
+    <button id="adminBuildingsMainBtn" class="btn-primary" type="button">🏘️ Bâtiments</button>
+    <button id="tabSettingsBtn" type="button">⚙️ Paramètres</button>
+  </div>
+
+  <!-- PANELS -->
+  <div id="tabPlayersPanel" style="display:none; margin-top:10px;">
+    <div id="adminPlayersList"></div>
+  </div>
+
+  <div id="tabMonstersPanel" style="display:none; margin-top:10px;">
+    <p style="margin:0 0 10px; opacity:.8;">Gestion des créatures.</p>
+    <div class="toolbar" style="justify-content:center; gap:10px; flex-wrap:wrap;">
+      <button id="openMonstersAdminBtn" class="btn-primary" type="button">📋 Liste</button>
+      <button id="openAddMonsterBtn" type="button">➕ Créer</button>
+    </div>
+  </div>
+
+  <div id="adminVillageSection" style="display:none; margin-top:10px;">
+    <h3 style="margin:0 0 8px;">🏘️ Bâtiments</h3>
+
+    <h4 style="margin:10px 0 6px;">➕ Créer un bâtiment</h4>
+
+    <label>
+      Nom du bâtiment<br>
+      <input type="text" id="buildingNameInput">
+    </label><br><br>
+
+    <label>
+      Bonus ATK<br>
+      <input type="number" id="buildingAtkInput" value="0">
+    </label><br><br>
+
+    <label>
+      Bonus DEF<br>
+      <input type="number" id="buildingDefInput" value="0">
+    </label><br><br>
+
+    <label>
+      Coût (sous)<br>
+      <input type="number" id="buildingCostInput" value="0">
+    </label><br><br>
+
+    <button id="createBuildingBtn" class="btn-primary" type="button">Créer le bâtiment</button>
+
+    <hr>
+
+    <h4 style="margin:10px 0 6px;">📋 Catalogue</h4>
+    <div id="buildingsList"></div>
+  </div>
+
+  <div id="tabSettingsPanel" style="display:none; margin-top:10px;">
+    <h3 style="margin:0 0 8px;">⚙️ Paramètres</h3>
+
+    <h4 style="margin:10px 0 6px;">Limite de combats par jour</h4>
+    <p style="margin-top:0; opacity:.75;">
+      0 = illimité.
+    </p>
+
+    <div class="toolbar" style="justify-content:center; gap:10px; flex-wrap:wrap;">
+      <input id="dailyCombatLimitInput" type="number" min="0" step="1" placeholder="Ex: 20">
+      <button id="saveDailyCombatLimitBtn" class="btn-primary" type="button">💾 Enregistrer</button>
+    </div>
+
+    <p id="dailyCombatLimitInfo" style="opacity:.75; margin-top:8px;"></p>
+  </div>
+
+  <div class="toolbar" style="justify-content:center; margin-top:14px;">
+    <button id="adminClose" type="button">Fermer</button>
+  </div>
 </div>
-<div class="gold-rule"></div>
-<div class="toolbar" style="justify-content:flex-start;">
-  <button id="tabPlayersBtn" class="btn-primary">👤 Joueurs</button>
-  <button id="tabMonstersBtn">🧟 Créatures</button>
-  <button id="tabVillageBtn" class="btn-primary">🏘️ Village</button>
+
+
+<!-- ===== POPUP ADMIN JOUEUR ===== -->
+<div class="popup" id="adminPlayerEditPopup" style="display:none; max-width:560px;">
+  <h2>👤 Joueur</h2>
+
+  <p><b id="adminEditPlayerName">Nom : ...</b></p>
+  <p id="adminEditLastLogin">Dernière connexion : ...</p>
+  <p id="adminEditGoldTotal">Or total gagné : ...</p>
+  <p id="adminEditGoldCurrent">Or actuel : ...</p>
+
+  <div class="gold-rule"></div>
+
+  <label>Classe</label>
+  <select id="adminEditClassSelect">
+    <option>Guerrier</option>
+    <option>Voleur</option>
+    <option>Mage</option>
+    <option>Nécromancien</option>
+    <option>Archer</option>
+  </select>
+
+  <label style="margin-top:10px;">Équipe</label>
+  <select id="adminEditTeamSelect">
+    <option value="Ordre du Dragon Pourpre ⚔️">Ordre du Dragon Pourpre ⚔️</option>
+    <option value="Confrérie du Serpent Noir 🐍">Confrérie du Serpent Noir 🐍</option>
+  </select>
+
+  <div class="toolbar" style="justify-content:center; gap:10px; margin-top:12px; flex-wrap:wrap;">
+    <button id="adminEditSaveBtn" class="btn-primary" type="button">💾 Enregistrer</button>
+    <button id="adminEditGiveXpBtn" type="button">✨ Donner XP</button>
+    <button id="adminEditCloseBtn" type="button">⬅ Retour</button>
+  </div>
 </div>
-<div id="adminVillageSection">
+
+
+<div id="adminVillageSection" style="display:none;">
+
 
   <h3>🏘️ Village – Bâtiments</h3>
 
@@ -877,7 +985,8 @@ button:active{ transform: translateY(1px); }
   <div id="buildingsList"></div>
 </div>
 
-<div id="tabPlayersPanel">
+<div id="tabPlayersPanel" style="display:none;">
+
   <div id="adminPlayersList" style="margin-top:10px;"></div>
 </div>
 
@@ -892,7 +1001,7 @@ button:active{ transform: translateY(1px); }
   </div>
   
 </div>
-<button id="tabSettingsBtn">⚙️ Paramètres</button>
+
 <div id="tabSettingsPanel" style="display:none; margin-top:10px;">
   <h3>Limite de combats par jour</h3>
   <p style="margin-top:0; color:var(--muted);">
@@ -908,8 +1017,6 @@ button:active{ transform: translateY(1px); }
 </div>
 
 
-    <button id="adminClose">Fermer</button>
-</div>
 
 <!-- ===== POPUP RÈGLES ===== -->
 <div class="popup" id="rulesPopup" style="display:none;">
@@ -1240,6 +1347,15 @@ auth.onAuthStateChanged(async (user) => {
     if (user) {
         // Utilisateur connecté
         currentUser = user.uid;
+        // ✅ stocke la dernière connexion (si doc joueur existe)
+try {
+  await db.collection("players").doc(currentUser).set({
+    lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+} catch(e) {
+  console.warn("lastLoginAt update failed", e);
+}
+
         await loadGameConfig(); // ✅ charge la limite combats/jour dès la connexion (même après refresh)
         await ensureDailyCombatCounter(); // ✅ initialise / reset uniquement si nouveau jour
 // init villages + catalogue (une fois à la connexion)
@@ -2072,6 +2188,9 @@ function closeAllPopups(){
     // ✅ ajout : popup créature
     const add = document.getElementById('addMonsterPopup');
     if(add) add.style.display = 'none';
+        const edit = document.getElementById('adminPlayerEditPopup');
+    if(edit) edit.style.display = 'none';
+
 }
 
 function showPopup(id){
@@ -2097,167 +2216,72 @@ cancelStatsBtn.onclick = () => { overlay.style.display='none'; characterSheetPop
 
 // ===== ADMIN =====
 adminBtn.onclick = async () => {
-    overlay.style.display = 'block';
-    adminPopup.style.display = 'block';
-    adminPlayersList.innerHTML = '';
-setAdminTab("players");
+  overlay.style.display = 'block';
+  adminPopup.style.display = 'block';
 
-    // Création du tableau
-    const table = document.createElement('table');
+  // ✅ on ouvre l'onglet joueurs
+  setAdminTab("players");
 
-    // Entête
-    const thead = document.createElement('thead');
-    thead.innerHTML = `
-        <tr style="background-color:#d4af37;color:#000;">
-            <th>Nom</th>
-            <th>Classe</th>
-            <th>Équipe</th>
-            <th>Niveau</th>
-            <th>XP</th>
-            <th>Actions</th>
-        </tr>
-    `;
-    table.appendChild(thead);
+  // ✅ liste simple par équipe (TON nouveau rendu)
+  await renderAdminPlayersSimple();
 
-    const tbody = document.createElement('tbody');
-    const snapshot = await db.collection('players').get();
+  // (optionnel) si tu veux garder le rendu adminMonstersList/table quelque part, sinon tu peux enlever
+  // await renderAdminMonsters();
 
-    snapshot.forEach(docSnap => {
-        const player = docSnap.data();
-        const uid = docSnap.id;
+  adminClose.onclick = () => {
+    overlay.style.display = 'none';
+    adminPopup.style.display = 'none';
+  };
+};
 
-        const tr = document.createElement('tr');
-
-        if(player.character){
-            // Nom
-            const tdName = document.createElement('td');
-            const nameInput = document.createElement('input');
-            nameInput.value = player.character.name || '';
-            nameInput.style.width = '90%';
-            tdName.appendChild(nameInput);
-            tr.appendChild(tdName);
-
-            // Classe
-            const tdClass = document.createElement('td');
-            const classSelect = document.createElement('select');
-            ['Guerrier','Voleur','Mage','Nécromancien','Archer'].forEach(c=>{
-                const opt = document.createElement('option');
-                opt.value = c; opt.textContent = c;
-                classSelect.appendChild(opt);
-            });
-            classSelect.value = player.character.classe || '';
-            tdClass.appendChild(classSelect);
-            tr.appendChild(tdClass);
-
-            // Équipe
-            const tdTeam = document.createElement('td');
-            const teamSelect = document.createElement('select');
-            teamSelect.innerHTML = `
-                <option value="Ordre du Dragon Pourpre ⚔️">Ordre du Dragon Pourpre ⚔️</option>
-                <option value="Confrérie du Serpent Noir 🐍">Confrérie du Serpent Noir 🐍</option>
-            `;
-            teamSelect.value = player.character.team || "Ordre du Dragon Pourpre ⚔️";
-            tdTeam.appendChild(teamSelect);
-            tr.appendChild(tdTeam);
-
-            // Niveau
-            const tdLevel = document.createElement('td');
-            tdLevel.textContent = player.level || 1;
-            tr.appendChild(tdLevel);
-
-            // XP
-            const tdXP = document.createElement('td');
-            tdXP.textContent = player.xp || 0;
-            tr.appendChild(tdXP);
-
-            // Actions
-            const tdActions = document.createElement('td');
-
-            // Enregistrer
-            const saveBtn = document.createElement('button');
-            saveBtn.textContent = '💾';
-            saveBtn.onclick = async () => {
-                await db.collection('players').doc(uid).update({
-                    "character.name": nameInput.value,
-                    "character.classe": classSelect.value,
-                    "character.team": teamSelect.value
-                });
-               
-                adminHandler(); // refresh
-                alert('Modifications enregistrées !');
-            };
-            tdActions.appendChild(saveBtn);
-
-            // Supprimer
-            const delBtn = document.createElement('button');
-            delBtn.textContent = '🗑️';
-            delBtn.onclick = async () => {
-                if(confirm(`Supprimer ${player.character.name} ?`)){
-                    await db.collection('players').doc(uid).update({ character: null });
-                    adminHandler();
-                    alert('Personnage supprimé');
-                }
-            };
-            tdActions.appendChild(delBtn);
-
-            // Donner XP
-            const xpBtn = document.createElement('button');
-            xpBtn.textContent = '✨';
-            xpBtn.onclick = async () => {
-                const amount = parseInt(prompt("Combien d'XP donner ?"));
-                if(!amount || amount <= 0) return;
-                await giveXpToPlayer(uid, player, amount);
-                alert(`${amount} XP accordée`);
-                adminHandler();
-            };
-            tdActions.appendChild(xpBtn);
-
-            tr.appendChild(tdActions);
-
-        } else {
-            const td = document.createElement('td');
-            td.colSpan = 6;
-            td.textContent = 'Pas de personnage';
-            td.style.textAlign = 'center';
-            tr.appendChild(td);
-        }
-
-        tbody.appendChild(tr);
-    });
-
-    table.appendChild(tbody);
-    adminPlayersList.appendChild(table);
-await renderAdminMonsters();
-
-
-    // ===== Réparer le bouton fermer =====
-    adminClose.onclick = () => {
-        overlay.style.display = 'none';
-        adminPopup.style.display = 'none';
-    };
-}
 function setAdminTab(tab){
   const pBtn = document.getElementById('tabPlayersBtn');
   const mBtn = document.getElementById('tabMonstersBtn');
+  const vBtn = document.getElementById('tabVillageBtn');
+  const sBtn = document.getElementById('tabSettingsBtn');
+
   const pPanel = document.getElementById('tabPlayersPanel');
   const mPanel = document.getElementById('tabMonstersPanel');
+  const vPanel = document.getElementById('adminVillageSection');
+  const sPanel = document.getElementById('tabSettingsPanel');
 
-  if(!pBtn || !mBtn || !pPanel || !mPanel) return;
+  if(!pPanel || !mPanel || !vPanel || !sPanel) return;
 
-  const isPlayers = tab === "players";
-  pPanel.style.display = isPlayers ? "block" : "none";
-  mPanel.style.display = isPlayers ? "none" : "block";
+  // afficher le bon panel
+pPanel.style.display = (tab === "players")  ? "block" : "none";
+mPanel.style.display = (tab === "monsters") ? "block" : "none";
+vPanel.style.display = (tab === "village")  ? "block" : "none";
+sPanel.style.display = (tab === "settings") ? "block" : "none";
 
-  pBtn.classList.toggle("tab-active", isPlayers);
-  mBtn.classList.toggle("tab-active", !isPlayers);
 
-  // optionnel : ajuste classes
-  pBtn.classList.toggle("btn-primary", isPlayers);
-  mBtn.classList.toggle("btn-primary", !isPlayers);
+  // style boutons (si bouton absent, pas grave)
+  const setBtnState = (btn, active) => {
+    if(!btn) return;
+    btn.classList.toggle("tab-active", active);
+    btn.classList.toggle("btn-primary", active);
+  };
+
+  setBtnState(pBtn, tab === "players");
+  setBtnState(mBtn, tab === "monsters");
+  setBtnState(vBtn, tab === "village");
+  setBtnState(sBtn, tab === "settings");
 }
+
+// =======================
+// ADMIN - Boutons principaux (UI simple)
+// =======================
+safeOnClick('adminPlayersMainBtn', () => setAdminTab("players"));
+safeOnClick('adminMonstersMainBtn', () => setAdminTab("monsters"));
+safeOnClick('adminBuildingsMainBtn', () => setAdminTab("village"));
 
 safeOnClick('tabPlayersBtn', () => setAdminTab("players"));
 safeOnClick('tabMonstersBtn', () => setAdminTab("monsters"));
+safeOnClick('tabVillageBtn', () => setAdminTab("village"));
+safeOnClick('tabSettingsBtn', async () => {
+  setAdminTab("settings");
+  await loadGameConfig();
+});
+
 
 adminClose.onclick = () => { overlay.style.display='none'; adminPopup.style.display='none'; };
 
@@ -2586,10 +2610,23 @@ if(!metMonsters.includes(monster.name)){
 }
 
 // 🔥 UPDATE FIRESTORE
-await db.collection('players').doc(currentUser).update({
-    "character.gold": newGold,
-    "character.metMonsters": metMonsters
-});
+const gained = Number(gainedGold) || 0;
+
+const updateData = {
+  "character.gold": newGold,
+  "character.metMonsters": metMonsters
+};
+
+if (gained > 0) {
+  updateData["character.totalGoldEarned"] = firebase.firestore.FieldValue.increment(gained);
+  console.log("✅ totalGoldEarned +", gained);
+} else {
+  console.log("ℹ️ pas de gain -> totalGoldEarned inchangé");
+}
+
+await db.collection('players').doc(currentUser).update(updateData);
+
+
 
 // ✅ UPDATE BANQUE IMMÉDIAT
 updateBankDisplay({
@@ -2736,7 +2773,16 @@ if (imageFile && !imageUrl) {
 
     alert("Créature ajoutée au bestiaire !");
 
-    closeAllPopups();
+    closeAddMonsterPopup();
+
+// rester côté admin créatures
+document.getElementById('monstersAdminPopup').style.display = 'block';
+document.getElementById('adminPopup').style.display = 'none';
+overlay.style.display = 'block';
+
+// recharger la liste
+loadMonstersList();
+
 });
 
 async function renderAdminMonsters() {
@@ -3017,7 +3063,14 @@ alert(imageUrl);
     });
 
     alert("Créature ajoutée !");
-    closeAddMonsterPopup();
+// rester sur la popup d'ajout : on vide les champs
+document.getElementById('addMonsterName').value = '';
+document.getElementById('addMonsterAttack').value = '';
+document.getElementById('addMonsterDefense').value = '';
+document.getElementById('addMonsterHp').value = '';
+document.getElementById('addMonsterGold').value = '';
+document.getElementById('addMonsterImage').value = '';
+
     if (document.getElementById('monstersAdminPopup').style.display === 'block') {
   loadMonstersList();
 }
@@ -3227,21 +3280,7 @@ safeOnClick('tabSettingsBtn', async () => {
   setAdminTab("settings");
   await loadGameConfig();
 });
-// DEBUG + OUVERTURE ONGLET PARAMETRES (béton)
-safeOnClick('tabSettingsBtn', async () => {
-  console.log("✅ click tabSettingsBtn");
-  const p = document.getElementById('tabPlayersPanel');
-  const m = document.getElementById('tabMonstersPanel');
-  const s = document.getElementById('tabSettingsPanel');
 
-  console.log("panels:", !!p, !!m, !!s);
-
-  if(p) p.style.display = "none";
-  if(m) m.style.display = "none";
-  if(s) s.style.display = "block";
-
-  await loadGameConfig();
-});
 function getTodayKeyParis(){
   return new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }).format(new Date());
 }
@@ -3318,24 +3357,7 @@ try {
 
 });
 
-db.collection("buildingsCatalog").onSnapshot((snapshot) => {
-  const list = document.getElementById("buildingsList");
-  list.innerHTML = "";
 
-  snapshot.forEach((doc) => {
-    const b = doc.data();
-
-    const div = document.createElement("div");
-    div.style.marginBottom = "8px";
-
-    const atk = Number(b.atk ?? b.bonusAtk ?? b.bonusATK ?? b.ATK ?? 0);
-const def = Number(b.def ?? b.bonusDef ?? b.bonusDEF ?? b.DEF ?? 0);
-const cost = Number(b.cost ?? b.price ?? b.cout ?? 0);
-
-
-    list.appendChild(div);
-  });
-});
 
 async function deleteBuilding(buildingId) {
   if (!confirm("Supprimer ce bâtiment ?")) return;
@@ -3388,6 +3410,203 @@ if (document.getElementById("buildingsList")) {
     }
   });
 }
+// =======================
+// ADMIN - JOUEURS (liste simple par équipe)
+// =======================
+async function renderAdminPlayersSimple() {
+  const u = firebase.auth().currentUser;
+  if (!u || u.email !== adminEmail) {
+    alert("Accès admin refusé.");
+    return;
+  }
+
+  const host = document.getElementById("adminPlayersList");
+  if (!host) return;
+
+  host.innerHTML = "<p>Chargement...</p>";
+
+  const snap = await db.collection("players").get();
+
+  const teams = {
+    "Ordre du Dragon Pourpre ⚔️": [],
+    "Confrérie du Serpent Noir 🐍": [],
+    "Sans personnage": []
+  };
+
+  snap.forEach(docSnap => {
+    const p = docSnap.data();
+    const uid = docSnap.id;
+
+    if (!p || !p.character) {
+      teams["Sans personnage"].push({ uid, name: "(sans personnage)", data: p });
+      return;
+    }
+
+    const teamName = p.character.team || "Sans personnage";
+    const entry = { uid, name: p.character.name || "(sans nom)", data: p };
+
+    if (!teams[teamName]) teams[teamName] = [];
+    teams[teamName].push(entry);
+  });
+
+  // tri A→Z dans chaque équipe
+  Object.keys(teams).forEach(k => {
+    teams[k].sort((a,b) => (a.name||"").localeCompare(b.name||""));
+  });
+
+  // rendu
+  host.innerHTML = "";
+
+  const makeSection = (title, arr) => {
+    const box = document.createElement("div");
+    box.style.marginBottom = "14px";
+
+    const h = document.createElement("h3");
+    h.style.margin = "10px 0 6px";
+    h.textContent = `${title} — ${arr.length} joueur(s)`;
+    box.appendChild(h);
+
+    if (arr.length === 0) {
+      const p = document.createElement("p");
+      p.style.opacity = "0.7";
+      p.textContent = "Aucun.";
+      box.appendChild(p);
+      return box;
+    }
+
+    arr.forEach(item => {
+      // on n'affiche que les joueurs avec personnage dans les équipes principales
+      if (title !== "Sans personnage" && (!item.data || !item.data.character)) return;
+
+      const line = document.createElement("div");
+      line.style.padding = "8px";
+      line.style.borderBottom = "1px solid #ddd";
+      line.style.cursor = "pointer";
+      line.innerHTML = `👉 <b>${item.name}</b>`;
+      line.onclick = () => openAdminPlayerEdit(item.uid);
+
+      box.appendChild(line);
+    });
+
+    return box;
+  };
+
+  host.appendChild(makeSection("Ordre du Dragon Pourpre ⚔️", teams["Ordre du Dragon Pourpre ⚔️"]));
+  host.appendChild(makeSection("Confrérie du Serpent Noir 🐍", teams["Confrérie du Serpent Noir 🐍"]));
+  // optionnel : afficher aussi sans personnage
+  // host.appendChild(makeSection("Sans personnage", teams["Sans personnage"]));
+}
+
+// =======================
+// ADMIN - POPUP EDIT JOUEUR
+// =======================
+let adminEditingUid = null;
+
+function formatDateFR(ts) {
+  if (!ts) return "—";
+  try {
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString("fr-FR");
+  } catch {
+    return "—";
+  }
+}
+
+async function openAdminPlayerEdit(uid) {
+  const u = firebase.auth().currentUser;
+  if (!u || u.email !== adminEmail) {
+    alert("Accès admin refusé.");
+    return;
+  }
+
+  const snap = await db.collection("players").doc(uid).get();
+  const p = snap.exists ? snap.data() : null;
+
+  if (!p || !p.character) {
+    alert("Ce joueur n'a pas de personnage.");
+    return;
+  }
+
+  // ✅ Anti-crash : si la popup/ids n'existent pas, on s'arrête proprement
+  const popup = document.getElementById("adminPlayerEditPopup");
+  const elName = document.getElementById("adminEditPlayerName");
+  const elLast = document.getElementById("adminEditLastLogin");
+  const elTot  = document.getElementById("adminEditGoldTotal");
+  const elCur  = document.getElementById("adminEditGoldCurrent");
+  const selClass = document.getElementById("adminEditClassSelect");
+  const selTeam  = document.getElementById("adminEditTeamSelect");
+
+  if (!popup || !elName || !elLast || !elTot || !elCur || !selClass || !selTeam) {
+    console.error("❌ Popup admin joueur manquante dans le HTML (adminPlayerEditPopup + ids adminEdit...).");
+    alert("La popup 'édition joueur' n'est pas encore dans ton HTML (ids manquants).");
+    return;
+  }
+
+  adminEditingUid = uid;
+
+  // infos
+  elName.textContent = `Nom : ${p.character.name || "(sans nom)"}`;
+  elLast.textContent = `Dernière connexion : ${formatDateFR(p.lastLoginAt)}`;
+
+  const totalEarned = Number(p.character.totalGoldEarned ?? 0);
+  const currentGold = Number(p.character.gold ?? 0);
+
+  elTot.textContent = `Or total gagné : ${totalEarned} sous`;
+  elCur.textContent = `Or actuel : ${currentGold} sous`;
+
+  // selects
+  selClass.value = p.character.classe || "Guerrier";
+  selTeam.value = p.character.team || "Ordre du Dragon Pourpre ⚔️";
+
+  // afficher popup
+  document.getElementById("adminPopup").style.display = "none";
+  popup.style.display = "block";
+  overlay.style.display = "block";
+}
+
+
+// enregistrer classe/équipe
+safeOnClick("adminEditSaveBtn", async () => {
+  if (!adminEditingUid) return;
+
+  const newClass = document.getElementById("adminEditClassSelect").value;
+  const newTeam = document.getElementById("adminEditTeamSelect").value;
+
+  await db.collection("players").doc(adminEditingUid).update({
+    "character.classe": newClass,
+    "character.team": newTeam
+  });
+
+  alert("Modifications enregistrées ✅");
+});
+
+// donner XP
+safeOnClick("adminEditGiveXpBtn", async () => {
+  if (!adminEditingUid) return;
+
+  const amount = parseInt(prompt("Combien d'XP donner ?"), 10);
+  if (!amount || amount <= 0) return;
+
+  // on recharge le joueur pour utiliser ta fonction existante giveXpToPlayer
+  const snap = await db.collection("players").doc(adminEditingUid).get();
+  const p = snap.exists ? snap.data() : null;
+  if (!p) return alert("Joueur introuvable.");
+
+  await giveXpToPlayer(adminEditingUid, p, amount);
+  alert(`${amount} XP accordée ✅`);
+});
+
+// fermer / retour à la liste joueurs
+safeOnClick("adminEditCloseBtn", async () => {
+  document.getElementById("adminPlayerEditPopup").style.display = "none";
+  document.getElementById("adminPopup").style.display = "block";
+  overlay.style.display = "block";
+
+  adminEditingUid = null;
+
+  // refresh liste simple
+  await renderAdminPlayersSimple();
+});
 
 
 
