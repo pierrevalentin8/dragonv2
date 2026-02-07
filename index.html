@@ -3292,21 +3292,30 @@ document.getElementById("createBuildingBtn").addEventListener("click", async (e)
 
   console.log("[Village/Admin] création demandée :", { name, atk, def, cost });
 
-  try {
-    const ref = await db.collection("buildingsCatalog").add({ name, atk, def, cost });
-    console.log("[Village/Admin] bâtiment créé id =", ref.id);
-    alert("Bâtiment créé ✅");
+try {
+  await db.collection("buildingsCatalog").add({
+    name,
+    atkBonus: atk,
+    defBonus: def,
+    cost: cost,
+    enabled: true
+  });
 
-    // reset formulaire
-    document.getElementById("buildingNameInput").value = "";
-    document.getElementById("buildingAtkInput").value = 0;
-    document.getElementById("buildingDefInput").value = 0;
-    document.getElementById("buildingCostInput").value = 0;
+  console.log("[Village/Admin] bâtiment créé");
+  alert("Bâtiment créé ✅");
 
-  } catch (error) {
-    console.error("[Village/Admin] création refusée/échouée :", error);
-    alert("Création impossible : " + (error?.message || "Erreur inconnue"));
-  }
+  // reset formulaire
+  document.getElementById("buildingNameInput").value = "";
+  document.getElementById("buildingAtkInput").value = 0;
+  document.getElementById("buildingDefInput").value = 0;
+  document.getElementById("buildingDefInput").value = 0;
+  document.getElementById("buildingCostInput").value = 0;
+
+} catch (error) {
+  console.error("[Village/Admin] création refusée/échouée :", error);
+  alert("Création impossible : " + (error?.message || "Erreur inconnue"));
+}
+
 });
 
 db.collection("buildingsCatalog").onSnapshot((snapshot) => {
@@ -3343,6 +3352,42 @@ async function deleteBuilding(buildingId) {
   }
 }
 
+// =======================
+// ADMIN - LISTE BÂTIMENTS (officielle)
+// =======================
+if (document.getElementById("buildingsList")) {
+  db.collection("buildingsCatalog").onSnapshot((snapshot) => {
+    const list = document.getElementById("buildingsList");
+    list.innerHTML = "";
+
+    snapshot.forEach((docSnap) => {
+      const b = docSnap.data();
+
+      const atk = Number(b.atkBonus ?? b.atk ?? 0);
+      const def = Number(b.defBonus ?? b.def ?? 0);
+      const cost = Number(b.cost ?? 0);
+      const enabled = (b.enabled !== false);
+
+      const row = document.createElement("div");
+      row.style.marginBottom = "8px";
+      row.innerHTML = `
+        <strong>${b.name || "(sans nom)"}</strong>
+        — ⚔️ +${atk} / 🛡️ +${def}
+        — ${cost} sous
+        ${enabled ? "" : "<em>(désactivé)</em>"}
+        <button type="button" class="btn-primary" style="padding:4px 8px; margin-left:8px;" onclick="deleteBuilding('${docSnap.id}')">
+          Supprimer
+        </button>
+      `;
+
+      list.appendChild(row);
+    });
+
+    if (snapshot.empty) {
+      list.innerHTML = "<em>Aucun bâtiment dans le catalogue.</em>";
+    }
+  });
+}
 
 
 
