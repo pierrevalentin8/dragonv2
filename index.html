@@ -751,7 +751,7 @@ button:active{ transform: translateY(1px); }
     <button id="loginBtn">Connexion</button>
 
     <div class="login-footer">
-        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 031
+        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 033 - 08.02.2026
     </div>
 </div>
 
@@ -819,10 +819,6 @@ button:active{ transform: translateY(1px); }
     </div>
 </div>
 
-<!-- OVERLAY UNIQUE -->
-<div class="overlay" id="overlay" style="display:none;"></div>
-
-
 
 
 <!-- POPUPS -->
@@ -860,38 +856,7 @@ button:active{ transform: translateY(1px); }
     </div>
   </div>
 
-  <div id="adminVillageSection" style="display:none; margin-top:10px;">
-    <h3 style="margin:0 0 8px;">🏘️ Bâtiments</h3>
-
-    <h4 style="margin:10px 0 6px;">➕ Créer un bâtiment</h4>
-
-    <label>
-      Nom du bâtiment<br>
-      <input type="text" id="buildingNameInput">
-    </label><br><br>
-
-    <label>
-      Bonus ATK<br>
-      <input type="number" id="buildingAtkInput" value="0">
-    </label><br><br>
-
-    <label>
-      Bonus DEF<br>
-      <input type="number" id="buildingDefInput" value="0">
-    </label><br><br>
-
-    <label>
-      Coût (sous)<br>
-      <input type="number" id="buildingCostInput" value="0">
-    </label><br><br>
-
-    <button id="createBuildingBtn" class="btn-primary" type="button">Créer le bâtiment</button>
-
-    <hr>
-
-    <h4 style="margin:10px 0 6px;">📋 Catalogue</h4>
-    <div id="buildingsList"></div>
-  </div>
+ 
 
   <div id="tabSettingsPanel" style="display:none; margin-top:10px;">
     <h3 style="margin:0 0 8px;">⚙️ Paramètres</h3>
@@ -921,6 +886,7 @@ button:active{ transform: translateY(1px); }
 
   <p><b id="adminEditPlayerName">Nom : ...</b></p>
   <p id="adminEditLastLogin">Dernière connexion : ...</p>
+  <p id="adminEditTotalXp">XP totale : ...</p>
   <p id="adminEditGoldTotal">Or total gagné : ...</p>
   <p id="adminEditGoldCurrent">Or actuel : ...</p>
 
@@ -985,36 +951,10 @@ button:active{ transform: translateY(1px); }
   <div id="buildingsList"></div>
 </div>
 
-<div id="tabPlayersPanel" style="display:none;">
 
-  <div id="adminPlayersList" style="margin-top:10px;"></div>
-</div>
 
-<div id="tabMonstersPanel" style="display:none; margin-top:10px;">
-  <p style="margin:0 0 10px; color:var(--muted);">
-    Accès rapide à la gestion des créatures.
-  </p>
-  <div class="toolbar">
-    <button id="openMonstersAdminBtn" class="btn-primary">🧟 Ouvrir la liste</button>
-    <button id="openAddMonsterBtn">➕ Créer une créature</button>
-    
-  </div>
-  
-</div>
 
-<div id="tabSettingsPanel" style="display:none; margin-top:10px;">
-  <h3>Limite de combats par jour</h3>
-  <p style="margin-top:0; color:var(--muted);">
-    0 = illimité. La limite s’applique à tous les joueurs.
-  </p>
 
-  <div class="toolbar">
-    <input id="dailyCombatLimitInput" type="number" min="0" step="1" placeholder="Ex: 20">
-    <button id="saveDailyCombatLimitBtn" class="btn-primary">💾 Enregistrer</button>
-  </div>
-
-  <p id="dailyCombatLimitInfo" style="color:var(--muted); margin-top:8px;"></p>
-</div>
 
 
 
@@ -1163,6 +1103,7 @@ button:active{ transform: translateY(1px); }
     <p id="sheetLevel"></p>
     <p id="sheetHouseDefBonus"></p>
     <p id="sheetDefenseTotal"></p>
+    <p id="sheetVillageBonuses" style="margin-top:6px; opacity:.9;"></p>
 
 
     <p id="pcText" data-pc="0">Points de Compétence restants : 0</p>
@@ -1379,18 +1320,43 @@ if (unsubscribePlayerListener) unsubscribePlayerListener();
 // listener temps réel du joueur (banque + UI toujours à jour)
 unsubscribePlayerListener = db.collection('players').doc(currentUser).onSnapshot((doc) => {
     const data = doc.exists ? doc.data() : { character:null, level:1, xp:0 };
+    // ✅ BONUS VILLAGE : démarre/maj l'écoute selon l'équipe du joueur
+if (data?.character?.team) {
+  startTeamBonusesLive(data.character.team);
+} else {
+  stopTeamBonusesLive();
+}
+
 
     // --- Banque ---
     updateBankDisplay(data);
 
     // --- UI principale ---
-    if(data.character){
-    // ✅ IMPORTANT : fermer toutes les popups de création au refresh
-    overlay.style.display = 'none';
-    characterPopup.style.display = 'none';
+if(data.character){
 
-    villagePage.style.display = 'block';
-    loginPage.style.display = 'none';
+  // ===== BONUS VILLAGE : démarrer/mettre à jour l'écoute temps réel =====
+  if (data.character && data.character.team) {
+    const teamName = data.character.team;
+
+    // relance uniquement si on change d'équipe
+    if (currentTeamForBonuses !== teamName) {
+      stopTeamBonusesLive();
+      currentTeamForBonuses = teamName;
+      startTeamBonusesLive(teamName);
+    }
+  } else {
+    // pas de personnage => pas de bonus
+    stopTeamBonusesLive();
+  }
+
+  // ✅ IMPORTANT : fermer toutes les popups de création au refresh
+  overlay.style.display = 'none';
+  characterPopup.style.display = 'none';
+
+  villagePage.style.display = 'block';
+  loginPage.style.display = 'none';
+
+
 
     welcomeText.textContent = `Bienvenue ${data.character.name}, ${data.character.classe}.`;
     teamText.textContent = `Équipe : ${data.character.team}`;
@@ -1403,6 +1369,7 @@ if(teamVillageBtn){
 }
 
 } else {
+    stopTeamBonusesLive(); // ✅ stop bonus village si pas de perso
     overlay.style.display = 'block';
     characterPopup.style.display = 'block';
     const teamVillageBtn = document.getElementById("teamVillageBtn");
@@ -1434,6 +1401,13 @@ if(teamVillageBtn){
             teamText.textContent = `Équipe : ${data.character.team}`;
             levelText.textContent = `Niveau : ${data.level || 1}`;
             xpText.textContent = `XP : ${data.xp || 0} / ${10*(data.level || 1)}`;
+            // ✅ BONUS VILLAGE : lance l'écoute temps réel sur le village de l'équipe
+const teamName = data.character.team || "";
+if (teamName && teamName !== currentTeamForBonuses) {
+  currentTeamForBonuses = teamName;
+  startTeamBonusesLive(teamName);
+}
+
         } else {
             overlay.style.display='block';
             characterPopup.style.display='block';
@@ -1663,6 +1637,81 @@ function calcVillageBonuses(buildings, builtIds){
   });
   return { atk, def };
 }
+// =======================
+// BONUS VILLAGE (temps réel) -> appliqués à tous les joueurs de l'équipe
+// =======================
+let teamBonuses = { atk: 0, def: 0 };
+let unsubTeamBonusesTeam = null;
+let unsubTeamBonusesBuildings = null;
+let teamBuildingsCache = [];
+let teamDataCache = null;
+let currentTeamForBonuses = null;
+
+function stopTeamBonusesLive(){
+  if (unsubTeamBonusesTeam) unsubTeamBonusesTeam();
+  if (unsubTeamBonusesBuildings) unsubTeamBonusesBuildings();
+  unsubTeamBonusesTeam = null;
+  unsubTeamBonusesBuildings = null;
+  teamBuildingsCache = [];
+  teamDataCache = null;
+  teamBonuses = { atk: 0, def: 0 };
+  currentTeamForBonuses = null;
+}
+
+function startTeamBonusesLive(teamName){
+  if(currentTeamForBonuses === teamName) return; // ✅ évite de relancer 50 fois
+  currentTeamForBonuses = teamName;
+
+  const teamId = getTeamDocId(teamName);
+  if(!teamId){
+    teamBonuses = { atk: 0, def: 0 };
+    return;
+  }
+
+
+  // stop ancien listener si on change d'équipe
+  if (unsubTeamBonusesTeam) unsubTeamBonusesTeam();
+  if (unsubTeamBonusesBuildings) unsubTeamBonusesBuildings();
+
+  teamBuildingsCache = [];
+  teamDataCache = null;
+
+  function recompute(){
+    const builtIds = (teamDataCache && Array.isArray(teamDataCache.builtIds))
+      ? teamDataCache.builtIds
+      : [];
+
+    teamBonuses = calcVillageBonuses(teamBuildingsCache, builtIds);
+
+    // ✅ si la fiche perso est ouverte, on met à jour l'affichage en live
+if (document.getElementById("characterSheetPopup")?.style.display === "block") {
+
+  
+
+  // ✅ recalcul les stats affichées (attaque/défense/etc) si ta fonction existe
+  if (typeof renderEffectiveStatsFromDatasets === "function") {
+    renderEffectiveStatsFromDatasets();
+  }
+}
+
+  }
+
+  // listener catalogue bâtiments (temps réel)
+  unsubTeamBonusesBuildings = db.collection("buildingsCatalog")
+    .where("enabled", "==", true)
+    .onSnapshot((snap) => {
+      teamBuildingsCache = [];
+      snap.forEach(d => teamBuildingsCache.push({ id: d.id, ...d.data() }));
+      recompute();
+    });
+
+  // listener du village d'équipe (temps réel)
+  unsubTeamBonusesTeam = db.collection("teams").doc(teamId)
+    .onSnapshot((doc) => {
+      teamDataCache = doc.exists ? doc.data() : { builtIds: [] };
+      recompute();
+    });
+}
 
 async function openTeamVillagePopup(){
   const popup = document.getElementById("teamVillagePopup");
@@ -1888,13 +1937,19 @@ function renderEffectiveStatsFromDatasets(){
   const e = parseInt(characterSheetPopup.dataset.allocEsquive || "0", 10);
   const v = parseInt(characterSheetPopup.dataset.allocVie     || "0", 10);
 
-  sheetAttaque.textContent = a + (base.attaque || 0);
-  sheetDefense.textContent = d + (base.defense || 0);
+  const vAtk = Number(teamBonuses?.atk ?? 0);
+  const vDef = Number(teamBonuses?.def ?? 0);
+
+  const houseDef = Number(characterSheetPopup.dataset.houseDefBonus ?? 0);
+
+  sheetAttaque.textContent = a + (base.attaque || 0) + vAtk;
+  sheetDefense.textContent = d + (base.defense || 0) + vDef + houseDef;
   sheetEsquive.textContent = e + (base.esquive || 0);
   sheetVie.textContent     = v + (base.vie || 0);
 
   updateSheetPoints();
 }
+
 
 function openCharacterSheet(playerData){
 
@@ -1931,40 +1986,38 @@ function openCharacterSheet(playerData){
 const houseLevel = (typeof playerData.houseLevel === "number") ? playerData.houseLevel : 0;
 const safeHouseLevel = Math.max(0, Math.min(houseLevel, houses.length - 1));
 const houseBonusDef = houses[safeHouseLevel]?.defense || 0;
+characterSheetPopup.dataset.houseDefBonus = houseBonusDef;
 
 const elHouse = document.getElementById("sheetHouseDefBonus");
 if(elHouse){
   elHouse.textContent = `🏠 Défense habitation : +${houseBonusDef}`;
 }
+// ✅ BONUS VILLAGE (affichage fiche)
+const elVillage = document.getElementById("sheetVillageBonuses");
+if(elVillage){
+  const vAtk = Number(teamBonuses?.atk ?? 0);
+  const vDef = Number(teamBonuses?.def ?? 0);
+  elVillage.textContent = `🏘️ Bonus village : ⚔️ +${vAtk} | 🛡️ +${vDef}`;
+}
 
   renderEffectiveStatsFromDatasets();
-
   overlay.style.display = 'block';
   characterSheetPopup.style.display = 'block';
   
+}
+// ✅ BONUS VILLAGE (affichage)
+const elVillage = document.getElementById("sheetVillageBonuses");
+if(elVillage){
+  const vAtk = Number(teamBonuses?.atk ?? 0);
+  const vDef = Number(teamBonuses?.def ?? 0);
+  elVillage.textContent = `🏘️ Bonus village : ⚔️ +${vAtk} | 🛡️ +${vDef}`;
 }
 
 // ========================
 // Gestion + / - des stats
 // ========================
 
-function renderEffectiveStatsFromDatasets(){
-  const classe = characterSheetPopup.dataset.classe || "";
-  const base = classBaseStats[classe] || { attaque:0, defense:0, esquive:0, vie:0 };
-  
 
-  const a = parseInt(characterSheetPopup.dataset.allocAttaque || "0", 10);
-  const d = parseInt(characterSheetPopup.dataset.allocDefense || "0", 10);
-  const e = parseInt(characterSheetPopup.dataset.allocEsquive || "0", 10);
-  const v = parseInt(characterSheetPopup.dataset.allocVie     || "0", 10);
-
-  sheetAttaque.textContent = a + (base.attaque || 0);
-  sheetDefense.textContent = d + (base.defense || 0);
-  sheetEsquive.textContent = e + (base.esquive || 0);
-  sheetVie.textContent     = v + (base.vie     || 0);
-
-  updateSheetPoints();
-}
 
 document.querySelectorAll('.stat-row .inc').forEach(btn => {
   btn.onclick = () => {
@@ -2223,15 +2276,18 @@ adminBtn.onclick = async () => {
   setAdminTab("players");
 
   // ✅ liste simple par équipe (TON nouveau rendu)
-  await renderAdminPlayersSimple();
+startAdminPlayersLive();
+
 
   // (optionnel) si tu veux garder le rendu adminMonstersList/table quelque part, sinon tu peux enlever
   // await renderAdminMonsters();
 
   adminClose.onclick = () => {
-    overlay.style.display = 'none';
-    adminPopup.style.display = 'none';
-  };
+  stopAdminPlayersLive(); // ✅ stop le temps réel
+  overlay.style.display = 'none';
+  adminPopup.style.display = 'none';
+};
+
 };
 
 function setAdminTab(tab){
@@ -2270,7 +2326,11 @@ sPanel.style.display = (tab === "settings") ? "block" : "none";
 // =======================
 // ADMIN - Boutons principaux (UI simple)
 // =======================
-safeOnClick('adminPlayersMainBtn', () => setAdminTab("players"));
+safeOnClick('adminPlayersMainBtn', () => {
+  setAdminTab("players");
+  startAdminPlayersLive(); // ✅ relance l'écoute à chaque retour sur l'onglet
+});
+
 safeOnClick('adminMonstersMainBtn', () => setAdminTab("monsters"));
 safeOnClick('adminBuildingsMainBtn', () => setAdminTab("village"));
 
@@ -2283,7 +2343,12 @@ safeOnClick('tabSettingsBtn', async () => {
 });
 
 
-adminClose.onclick = () => { overlay.style.display='none'; adminPopup.style.display='none'; };
+adminClose.onclick = () => {
+  stopAdminPlayersLive();
+  overlay.style.display='none';
+  adminPopup.style.display='none';
+};
+
 
 
 // ===== FONCTION XP =====
@@ -2313,7 +2378,16 @@ safeOnClick('loginBtn', () => { overlay.style.display='block'; loginPopup.style.
 safeOnClick('createBack', closeAllPopups);
 safeOnClick('loginBack', closeAllPopups);
 
-overlay.onclick=closeAllPopups;
+// ✅ Fermer seulement si on clique vraiment SUR l'overlay (pas dans une popup)
+overlay.onclick = (e) => {
+  if (e.target === overlay) closeAllPopups();
+};
+
+// ✅ Empêche les clics dans les popups de remonter vers l'overlay
+document.querySelectorAll('.popup').forEach(p => {
+  p.addEventListener('click', (e) => e.stopPropagation());
+});
+
 
 // ===== CREATION COMPTE =====
 safeOnClick('createSubmit', async () => {
@@ -2415,6 +2489,7 @@ if(teamVillageBtn){
 safeOnClick('logoutBtn', async () => {
     await auth.signOut();
     currentUser = null;
+    stopTeamBonusesLive(); // ✅ stop listeners bonus village
     villagePage.style.display = 'none';
     loginPage.style.display = 'block';
     adminBtn.style.display = 'none';
@@ -2535,13 +2610,17 @@ const houseLevel = typeof data.houseLevel === "number" ? data.houseLevel : 0;
 const safeHouseLevel = Math.max(0, Math.min(houseLevel, houses.length - 1));
 const houseBonusDef = houses[safeHouseLevel]?.defense || 0;
 
-// ===== STATS JOUEUR POUR LE COMBAT =====
+// ===== STATS JOUEUR POUR LE COMBAT (avec bonus maison + bonus village) =====
+const vAtk = Number(teamBonuses?.atk ?? 0);
+const vDef = Number(teamBonuses?.def ?? 0);
+
 const playerStats = {
-    hp: (stats.vie || 0) + (base.vie || 0),
-    attack: (stats.attaque || 0) + (base.attaque || 0),
-    defense: (stats.defense || 0) + (base.defense || 0) + houseBonusDef, // ✅ BONUS ICI
-    dodge: (stats.esquive || 0) + (base.esquive || 0)
+  hp: (stats.vie || 0) + (base.vie || 0),
+  attack: (stats.attaque || 0) + (base.attaque || 0) + vAtk,
+  defense: (stats.defense || 0) + (base.defense || 0) + houseBonusDef + vDef,
+  dodge: (stats.esquive || 0) + (base.esquive || 0)
 };
+
 
 
 
@@ -3411,29 +3490,54 @@ if (document.getElementById("buildingsList")) {
   });
 }
 // =======================
-// ADMIN - JOUEURS (liste simple par équipe)
+// ADMIN - JOUEURS (liste simple par équipe) - TEMPS RÉEL (robuste)
 // =======================
-async function renderAdminPlayersSimple() {
+let unsubAdminPlayers = null;
+
+function getAllAdminPlayersHosts(){
+  const adminPopup = document.getElementById("adminPopup");
+  if(!adminPopup) return [];
+  return Array.from(adminPopup.querySelectorAll("#adminPlayersList"));
+}
+
+function startAdminPlayersLive() {
   const u = firebase.auth().currentUser;
   if (!u || u.email !== adminEmail) {
     alert("Accès admin refusé.");
     return;
   }
 
-  const host = document.getElementById("adminPlayersList");
-  if (!host) return;
+  const hosts = getAllAdminPlayersHosts();
+  if (hosts.length === 0) {
+    console.warn("❌ Aucun #adminPlayersList trouvé dans #adminPopup");
+    return;
+  }
 
-  host.innerHTML = "<p>Chargement...</p>";
+  // stop ancien listener si déjà actif
+  if (unsubAdminPlayers) unsubAdminPlayers();
 
-  const snap = await db.collection("players").get();
+  hosts.forEach(h => h.innerHTML = "<p>Chargement...</p>");
 
+  unsubAdminPlayers = db.collection("players").onSnapshot((snap) => {
+  console.log("✅ Admin players live snap size =", snap.size);
+
+  // ✅ normalise les équipes (tu as plusieurs variantes en base)
+  function canonTeam(teamName) {
+    const t = String(teamName || "").toLowerCase();
+    if (t.includes("dragon pourpre")) return "Ordre du Dragon Pourpre ⚔️";
+    if (t.includes("serpent noir")) return "Confrérie du Serpent Noir 🐍";
+    return "Sans équipe";
+  }
+
+  // ✅ (RE)CONSTRUIT teams à CHAQUE snapshot
   const teams = {
     "Ordre du Dragon Pourpre ⚔️": [],
     "Confrérie du Serpent Noir 🐍": [],
+    "Sans équipe": [],
     "Sans personnage": []
   };
 
-  snap.forEach(docSnap => {
+  snap.forEach((docSnap) => {
     const p = docSnap.data();
     const uid = docSnap.id;
 
@@ -3442,29 +3546,27 @@ async function renderAdminPlayersSimple() {
       return;
     }
 
-    const teamName = p.character.team || "Sans personnage";
-    const entry = { uid, name: p.character.name || "(sans nom)", data: p };
-
-    if (!teams[teamName]) teams[teamName] = [];
-    teams[teamName].push(entry);
+    const teamName = canonTeam(p.character.team);
+    teams[teamName].push({
+      uid,
+      name: p.character.name || "(sans nom)",
+      data: p
+    });
   });
 
-  // tri A→Z dans chaque équipe
-  Object.keys(teams).forEach(k => {
-    teams[k].sort((a,b) => (a.name||"").localeCompare(b.name||""));
+  // tri A→Z
+  Object.keys(teams).forEach((k) => {
+    teams[k].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   });
 
-  // rendu
-  host.innerHTML = "";
-
-  const makeSection = (title, arr) => {
+  function makeSection(title, arr) {
     const box = document.createElement("div");
     box.style.marginBottom = "14px";
 
-    const h = document.createElement("h3");
-    h.style.margin = "10px 0 6px";
-    h.textContent = `${title} — ${arr.length} joueur(s)`;
-    box.appendChild(h);
+    const h3 = document.createElement("h3");
+    h3.style.margin = "10px 0 6px";
+    h3.textContent = `${title} — ${arr.length} joueur(s)`;
+    box.appendChild(h3);
 
     if (arr.length === 0) {
       const p = document.createElement("p");
@@ -3474,9 +3576,17 @@ async function renderAdminPlayersSimple() {
       return box;
     }
 
-    arr.forEach(item => {
-      // on n'affiche que les joueurs avec personnage dans les équipes principales
-      if (title !== "Sans personnage" && (!item.data || !item.data.character)) return;
+    arr.forEach((item) => {
+      // si pas de personnage, pas cliquable
+      if (!item.data || !item.data.character) {
+        const line = document.createElement("div");
+        line.style.padding = "8px";
+        line.style.borderBottom = "1px solid #ddd";
+        line.style.opacity = "0.6";
+        line.innerHTML = `👉 <b>${item.name}</b>`;
+        box.appendChild(line);
+        return;
+      }
 
       const line = document.createElement("div");
       line.style.padding = "8px";
@@ -3484,18 +3594,39 @@ async function renderAdminPlayersSimple() {
       line.style.cursor = "pointer";
       line.innerHTML = `👉 <b>${item.name}</b>`;
       line.onclick = () => openAdminPlayerEdit(item.uid);
-
       box.appendChild(line);
     });
 
     return box;
-  };
+  }
 
-  host.appendChild(makeSection("Ordre du Dragon Pourpre ⚔️", teams["Ordre du Dragon Pourpre ⚔️"]));
-  host.appendChild(makeSection("Confrérie du Serpent Noir 🐍", teams["Confrérie du Serpent Noir 🐍"]));
-  // optionnel : afficher aussi sans personnage
-  // host.appendChild(makeSection("Sans personnage", teams["Sans personnage"]));
+  // ⚠️ IMPORTANT : on recrée les sections POUR CHAQUE host (pas de cloneNode)
+  hosts.forEach((h) => {
+    h.innerHTML = "";
+    h.appendChild(makeSection("Ordre du Dragon Pourpre ⚔️", teams["Ordre du Dragon Pourpre ⚔️"]));
+    h.appendChild(makeSection("Confrérie du Serpent Noir 🐍", teams["Confrérie du Serpent Noir 🐍"]));
+
+    // si tu veux voir les cas “bizarres”
+    if (teams["Sans équipe"].length > 0) h.appendChild(makeSection("Sans équipe", teams["Sans équipe"]));
+    // if (teams["Sans personnage"].length > 0) h.appendChild(makeSection("Sans personnage", teams["Sans personnage"]));
+  });
+
+}, (err) => {
+  console.error("Admin players live error:", err);
+  hosts.forEach(h => h.innerHTML = "<p>Erreur chargement joueurs (voir console F12).</p>");
+});
+
 }
+
+function stopAdminPlayersLive() {
+  if (unsubAdminPlayers) {
+    unsubAdminPlayers();
+    unsubAdminPlayers = null;
+  }
+}
+
+
+
 
 // =======================
 // ADMIN - POPUP EDIT JOUEUR
@@ -3533,10 +3664,11 @@ async function openAdminPlayerEdit(uid) {
   const elLast = document.getElementById("adminEditLastLogin");
   const elTot  = document.getElementById("adminEditGoldTotal");
   const elCur  = document.getElementById("adminEditGoldCurrent");
+  const elXpTot = document.getElementById("adminEditTotalXp");
   const selClass = document.getElementById("adminEditClassSelect");
   const selTeam  = document.getElementById("adminEditTeamSelect");
 
-  if (!popup || !elName || !elLast || !elTot || !elCur || !selClass || !selTeam) {
+  if (!popup || !elName || !elLast || !elXpTot || !elTot || !elCur || !selClass || !selTeam) {
     console.error("❌ Popup admin joueur manquante dans le HTML (adminPlayerEditPopup + ids adminEdit...).");
     alert("La popup 'édition joueur' n'est pas encore dans ton HTML (ids manquants).");
     return;
@@ -3547,6 +3679,9 @@ async function openAdminPlayerEdit(uid) {
   // infos
   elName.textContent = `Nom : ${p.character.name || "(sans nom)"}`;
   elLast.textContent = `Dernière connexion : ${formatDateFR(p.lastLoginAt)}`;
+
+  const totalXp = calcTotalXp(p.level || 1, p.xp || 0);
+elXpTot.textContent = `XP totale : ${totalXp} XP (niveau ${p.level || 1} + ${p.xp || 0} XP)`;
 
   const totalEarned = Number(p.character.totalGoldEarned ?? 0);
   const currentGold = Number(p.character.gold ?? 0);
@@ -3605,8 +3740,18 @@ safeOnClick("adminEditCloseBtn", async () => {
   adminEditingUid = null;
 
   // refresh liste simple
-  await renderAdminPlayersSimple();
+  startAdminPlayersLive();
+
 });
+function calcTotalXp(level, xpInLevel){
+  const lvl = Math.max(1, parseInt(level, 10) || 1);
+  const xp = Math.max(0, parseInt(xpInLevel, 10) || 0);
+
+  // somme 10*1 + 10*2 + ... + 10*(lvl-1)
+  const xpSpentForLevels = 10 * ((lvl - 1) * lvl) / 2;
+
+  return xpSpentForLevels + xp;
+}
 
 
 
