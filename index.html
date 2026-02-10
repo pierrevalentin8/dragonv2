@@ -751,7 +751,7 @@ button:active{ transform: translateY(1px); }
     <button id="loginBtn">Connexion</button>
 
     <div class="login-footer">
-        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 033 - 08.02.2026
+        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 038 - 10.02.2026
     </div>
 </div>
 
@@ -771,6 +771,10 @@ button:active{ transform: translateY(1px); }
             <p id="teamText"></p>
             <p id="levelText"></p>
             <p id="xpText"></p>
+            <div id="houseDailyCombatsLine" class="muted">
+  ⚔️ Combats aujourd’hui : <b><span id="houseDailyCombats">0</span></b>
+</div>
+
         </div>
 
         <!-- BOUTONS ACTIONS -->
@@ -910,12 +914,30 @@ button:active{ transform: translateY(1px); }
   <div class="toolbar" style="justify-content:center; gap:10px; margin-top:12px; flex-wrap:wrap;">
     <button id="adminEditSaveBtn" class="btn-primary" type="button">💾 Enregistrer</button>
     <button id="adminEditGiveXpBtn" type="button">✨ Donner XP</button>
+      <div class="gold-rule"></div>
+
+  <h3 style="margin:10px 0 8px;">🖼️ Avatar du personnage</h3>
+
+  <img id="adminAvatarPreview"
+       src=""
+       alt="Avatar"
+       style="width:110px; height:110px; object-fit:cover; border-radius:14px; border:2px solid #d4af37; display:none; margin:8px auto;" />
+
+  <input id="adminAvatarFile" type="file" accept="image/*">
+
+  <div class="toolbar" style="justify-content:center; gap:10px; margin-top:10px; flex-wrap:wrap;">
+    <button id="adminAvatarUploadBtn" class="btn-primary" type="button">⬆️ Uploader</button>
+    <button id="adminAvatarRemoveBtn" type="button">🗑️ Retirer</button>
+  </div>
+
     <button id="adminEditCloseBtn" type="button">⬅ Retour</button>
   </div>
 </div>
 
 
-<div id="adminVillageSection" style="display:none;">
+<div class="popup" id="adminVillageSection" style="display:none; max-width:900px;">
+  <h2>🏘️ Village – Bâtiments</h2>
+
 
 
   <h3>🏘️ Village – Bâtiments</h3>
@@ -949,6 +971,11 @@ button:active{ transform: translateY(1px); }
 
   <h4>📋 Bâtiments existants</h4>
   <div id="buildingsList"></div>
+    <div class="toolbar" style="justify-content:center; margin-top:14px;">
+    <button id="adminVillageCloseBtn" type="button">Fermer</button>
+  </div>
+</div>
+
 </div>
 
 
@@ -993,6 +1020,7 @@ button:active{ transform: translateY(1px); }
 
   <div class="toolbar" style="justify-content:center;">
     <button id="donateVillageBtn" class="btn-primary">💰 Donner au village</button>
+    <button id="teamMembersBtn">👥 Équipe</button>
     <button id="closeTeamVillageBtn">⬅ Retour</button>
   </div>
 
@@ -1000,6 +1028,16 @@ button:active{ transform: translateY(1px); }
 
   <h3>Bâtiments</h3>
   <div id="teamVillageBuildings" style="text-align:left;"></div>
+
+  <div id="teamVillageMembersPanel" style="display:none; text-align:left;">
+  <h3>👥 Membres de l’équipe</h3>
+  <div id="teamVillageMembersList"></div>
+
+  <div class="toolbar" style="justify-content:center; margin-top:10px;">
+    <button id="backToBuildingsBtn">⬅ Retour aux bâtiments</button>
+  </div>
+</div>
+
 </div>
 
 
@@ -1096,6 +1134,10 @@ button:active{ transform: translateY(1px); }
 
 <div class="popup" id="characterSheetPopup">
     <h2>🛡️ Fiche Personnage 🗡️</h2>
+    <img id="sheetAvatar"
+         src=""
+         alt="Avatar personnage"
+         style="width:120px; height:120px; object-fit:cover; border-radius:16px; border:2px solid #d4af37; display:none; margin:10px auto;" />
 
     <!-- INFOS GÉNÉRALES -->
     <p id="sheetClass"></p>
@@ -1195,6 +1237,29 @@ function updateBankDisplay(playerData){
     if(houseEl) houseEl.textContent = bank.houseSpent;
     if(villageEl) villageEl.textContent = bank.villageSpent;
 }
+async function syncPlayersPublic(){
+  if(!currentUser) return;
+
+  const snap = await db.collection("players").doc(currentUser).get();
+  const p = snap.data();
+  if(!p || !p.character) return;
+
+  const name = p.character.name || "";
+  const team = p.character.team || "";
+  const spentVillage = Number(p.character.spentVillage ?? 0);
+  const houseLevel = (typeof p.houseLevel === "number") ? p.houseLevel : 0;
+
+  // si pas de name/team, on n'écrit pas (évite de réécrire du vide)
+  if(!name || !team) return;
+
+  await db.collection("playersPublic").doc(currentUser).set({
+    name,
+    team,
+    spentVillage,
+    houseLevel,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge:true });
+}
 
 
 
@@ -1275,6 +1340,8 @@ if(confirmUpgradeBtn) confirmUpgradeBtn.onclick = async () => {
         "character.gold": newGold,
         "character.spentHouse": newSpentHouse
     });
+await syncPlayersPublic();
+
 
     alert(`🏠 Maison améliorée : ${houses[nextLevel].name} !`);
     overlay.style.display = 'none';
@@ -1283,6 +1350,17 @@ if(confirmUpgradeBtn) confirmUpgradeBtn.onclick = async () => {
     // Mise à jour banque
     updateBankDisplay(await db.collection('players').doc(currentUser).get().then(d=>d.data()));
 };
+function renderHouseDailyCombats(playerData){
+  const el = document.getElementById("houseDailyCombats");
+  if(!el) return;
+
+  const today = getTodayKeyParis();
+  const dc = playerData?.character?.dailyCombats;
+
+  const countToday = (dc && dc.date === today) ? (dc.count || 0) : 0;
+  el.textContent = String(countToday);
+}
+
 // ===== GARDER L'UTILISATEUR CONNECTÉ APRÈS REFRESH =====
 auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -1328,8 +1406,12 @@ if (data?.character?.team) {
 }
 
 
-    // --- Banque ---
-    updateBankDisplay(data);
+
+// --- Banque ---
+updateBankDisplay(data);
+
+// --- Compteur combats du jour (Maison) ---
+renderHouseDailyCombats(data);
 
     // --- UI principale ---
 if(data.character){
@@ -1344,6 +1426,8 @@ if(data.character){
       currentTeamForBonuses = teamName;
       startTeamBonusesLive(teamName);
     }
+    syncPlayersPublic();
+
   } else {
     // pas de personnage => pas de bonus
     stopTeamBonusesLive();
@@ -1584,6 +1668,80 @@ const TEAM_DOC = {
 function getTeamDocId(teamName){
   return TEAM_DOC[teamName] || null;
 }
+function getTeamNameVariantsFromTeamId(teamId){
+  if(teamId === "dragon"){
+    return ["Ordre du Dragon Pourpre ⚔️", "L’Ordre du Dragon Pourpre ⚔️"];
+  }
+  if(teamId === "serpent"){
+    return ["Confrérie du Serpent Noir 🐍", "La Confrérie du Serpent Noir 🐍"];
+  }
+  return [];
+}
+async function openTeamMembersInVillagePopup(){
+  const popup = document.getElementById("teamVillagePopup");
+  const teamId = popup?.dataset?.teamId;
+  if(!teamId){ alert("TeamId introuvable."); return; }
+
+  const variants = getTeamNameVariantsFromTeamId(teamId);
+  if(!variants.length){ alert("Équipe inconnue."); return; }
+
+  console.log("Query team members on playersPublic, variants=", variants);
+
+  const list = document.getElementById("teamVillageMembersList");
+  if(!list) return;
+
+  list.innerHTML = "<p>Chargement...</p>";
+  showTeamMembersPanel(true);
+
+  try{
+    const snap = await db.collection("playersPublic")
+      .where("team", "in", variants)
+      .get();
+
+    const rows = [];
+    snap.forEach(docSnap => {
+      const p = docSnap.data();
+      if(!p) return;
+
+      const name = p.name || "(sans nom)";
+      const houseLevel = (typeof p.houseLevel === "number") ? p.houseLevel : 0;
+      const safeLevel = Math.max(0, Math.min(houseLevel, houses.length - 1));
+      const houseName = houses[safeLevel]?.name || "—";
+      const spentVillage = Number(p.spentVillage ?? 0);
+
+      rows.push({ name, houseLevel: safeLevel, houseName, spentVillage });
+    });
+
+    rows.sort((a,b) => (b.spentVillage - a.spentVillage) || a.name.localeCompare(b.name));
+
+    if(rows.length === 0){
+      list.innerHTML = "<p style='opacity:.8;'>Aucun membre trouvé.</p>";
+      return;
+    }
+
+    list.innerHTML = rows.map(r => `
+      <div style="padding:8px; border-bottom:1px solid #ddd;">
+        <div><b>${r.name}</b></div>
+        <div style="opacity:.9;">🏠 Habitation : <b>${r.houseName}</b> (niveau ${r.houseLevel})</div>
+        <div style="opacity:.9;">💰 Don au village : <b>${r.spentVillage}</b> sous</div>
+      </div>
+    `).join("");
+
+  }catch(e){
+    console.error("openTeamMembersInVillagePopup error =", e);
+    list.innerHTML = "<p>Erreur chargement (voir console F12).</p>";
+  }
+}
+
+
+function showTeamMembersPanel(show){
+  const buildingsWrap = document.getElementById("teamVillageBuildings");
+  const membersPanel  = document.getElementById("teamVillageMembersPanel");
+  if(!buildingsWrap || !membersPanel) return;
+
+  buildingsWrap.style.display = show ? "none" : "block";
+  membersPanel.style.display  = show ? "block" : "none";
+}
 
 async function ensureTeamsExist(){
   // crée les docs teams/dragon et teams/serpent si absents
@@ -1720,9 +1878,16 @@ async function openTeamVillagePopup(){
   const bonusEl = document.getElementById("teamVillageBonuses");
   const listEl = document.getElementById("teamVillageBuildings");
 
-  // reload player pour savoir son équipe et son or (safe)
+  if(!popup || !title || !goldEl || !bonusEl || !listEl){
+    console.error("openTeamVillagePopup: éléments DOM manquants");
+    alert("Popup village incomplète (voir console).");
+    return;
+  }
+
+  // reload joueur
   const playerSnap = await db.collection("players").doc(currentUser).get();
-  const playerData = playerSnap.data();
+  const playerData = playerSnap.exists ? playerSnap.data() : null;
+
   if(!playerData || !playerData.character){
     alert("Aucun personnage.");
     return;
@@ -1735,22 +1900,27 @@ async function openTeamVillagePopup(){
     return;
   }
 
-  // charge team + buildings
+  // charge team + catalogue
   const [teamSnap, buildings] = await Promise.all([
     db.collection("teams").doc(teamId).get(),
     loadBuildingsCatalog()
   ]);
 
-  const teamData = teamSnap.exists ? teamSnap.data() : { gold:0, builtIds:[] };
-  const villageGold = parseInt(teamData.gold,10) || 0;
+  const teamData = teamSnap.exists ? teamSnap.data() : { gold:0, builtIds:[], builtBy:{} };
+  const villageGold = parseInt(teamData.gold, 10) || 0;
   const builtIds = Array.isArray(teamData.builtIds) ? teamData.builtIds : [];
+  const builtBy = (teamData.builtBy && typeof teamData.builtBy === "object") ? teamData.builtBy : {};
 
+  // ✅ bonuses DOIT être défini avant usage
   const bonuses = calcVillageBonuses(buildings, builtIds);
 
-  // UI header
+  // header UI
   title.textContent = `🏘️ Village — ${teamName}`;
   goldEl.textContent = `Or du village : ${villageGold}`;
   bonusEl.textContent = `Bonus du village : ⚔️ +${bonuses.atk}  |  🛡️ +${bonuses.def}`;
+
+  // revenir sur vue bâtiments
+  if (typeof showTeamMembersPanel === "function") showTeamMembersPanel(false);
 
   // render buildings
   listEl.innerHTML = "";
@@ -1760,6 +1930,8 @@ async function openTeamVillagePopup(){
     const row = document.createElement("div");
     row.className = "building-row" + (builtSet.has(b.id) ? " built" : "");
 
+    const builderName = builtSet.has(b.id) ? (builtBy[b.id] || "?") : "";
+
     const left = document.createElement("div");
     left.style.flex = "1";
     left.innerHTML = `
@@ -1768,7 +1940,7 @@ async function openTeamVillagePopup(){
       <div class="bbadges">
         <span class="badge">⚔️ +${b.atkBonus ?? 0}</span>
         <span class="badge">🛡️ +${b.defBonus ?? 0}</span>
-        ${builtSet.has(b.id) ? `<span class="badge">✅ Construit</span>` : ``}
+        ${builtSet.has(b.id) ? `<span class="badge">✅ Construit par ${builderName}</span>` : ``}
       </div>
     `;
 
@@ -1781,7 +1953,7 @@ async function openTeamVillagePopup(){
       btn.className = "btn-primary";
       btn.onclick = async () => {
         await buildVillageBuilding(teamId, b.id, b.cost || 0);
-        await openTeamVillagePopup(); // refresh (simple)
+        await openTeamVillagePopup(); // refresh
       };
       actions.appendChild(btn);
     } else {
@@ -1796,29 +1968,42 @@ async function openTeamVillagePopup(){
     listEl.appendChild(row);
   });
 
-  // afficher popup
   overlay.style.display = "block";
   popup.style.display = "block";
-
-  // stock teamId pour autres actions (don)
   popup.dataset.teamId = teamId;
 }
+
+
 
 async function buildVillageBuilding(teamId, buildingId, cost){
   if(!currentUser) return;
 
-  // transaction: retire or village, ajoute buildingId dans builtIds
   await db.runTransaction(async (tx) => {
     const teamRef = db.collection("teams").doc(teamId);
-    const teamSnap = await tx.get(teamRef);
+    const playerRef = db.collection("players").doc(currentUser);
 
-    if(!teamSnap.exists){
-      tx.set(teamRef, { gold:0, builtIds:[] }, { merge:true });
+    const [teamSnap, playerSnap] = await Promise.all([
+      tx.get(teamRef),
+      tx.get(playerRef)
+    ]);
+
+    if(!playerSnap.exists){
+      throw new Error("Joueur introuvable.");
     }
 
-    const teamData = teamSnap.exists ? teamSnap.data() : { gold:0, builtIds:[] };
+    const playerData = playerSnap.data();
+    const playerName = playerData?.character?.name || "(inconnu)";
+
+    if(!teamSnap.exists){
+      tx.set(teamRef, { gold:0, builtIds:[], builtBy:{} }, { merge:true });
+    }
+
+    const teamData = teamSnap.exists ? teamSnap.data() : { gold:0, builtIds:[], builtBy:{} };
     const gold = parseInt(teamData.gold,10) || 0;
     const builtIds = Array.isArray(teamData.builtIds) ? teamData.builtIds.slice() : [];
+    const builtBy = typeof teamData.builtBy === "object" && teamData.builtBy !== null
+      ? { ...teamData.builtBy }
+      : {};
 
     if(builtIds.includes(buildingId)) return; // déjà construit
     if(gold < cost){
@@ -1826,16 +2011,19 @@ async function buildVillageBuilding(teamId, buildingId, cost){
     }
 
     builtIds.push(buildingId);
+    builtBy[buildingId] = playerName; // 👈 on mémorise le constructeur
 
     tx.update(teamRef, {
       gold: gold - cost,
-      builtIds: builtIds
+      builtIds: builtIds,
+      builtBy: builtBy
     });
   }).catch(e => {
     alert(e.message || "Erreur construction.");
     throw e;
   });
 }
+
 
 async function donateToVillage(teamId){
   const amount = parseInt(prompt("Combien de sous donner au village ? (irréversible)"), 10);
@@ -1856,26 +2044,26 @@ async function donateToVillage(teamId){
     const teamData = tSnap.exists ? tSnap.data() : { gold:0, builtIds:[] };
     const villageGold = parseInt(teamData.gold, 10) || 0;
 
-    // player gold - amount
     tx.update(playerRef, {
       "character.gold": playerGold - amount,
-      // optionnel : on track les dons
       "character.spentVillage": (parseInt(p.character.spentVillage,10) || 0) + amount
     });
 
-    // village gold + amount
     if(tSnap.exists){
       tx.update(teamRef, { gold: villageGold + amount });
     } else {
       tx.set(teamRef, { gold: amount, builtIds: [] }, { merge:true });
     }
-  }).catch(e => {
-    alert(e.message || "Erreur don.");
-    throw e;
   });
+
+  // ✅ ici amount existe + on est dans une async function
+  await syncPlayersPublic();
+
 
   alert(`💰 Don effectué : ${amount} sous ajoutés au village.`);
 }
+
+
 
 // boutons popup village
 safeOnClick("closeTeamVillageBtn", () => {
@@ -1893,6 +2081,12 @@ safeOnClick("donateVillageBtn", async () => {
 
 // bouton sur la page maison
 safeOnClick("teamVillageBtn", openTeamVillagePopup);
+
+safeOnClick("teamMembersBtn", openTeamMembersInVillagePopup);
+
+safeOnClick("backToBuildingsBtn", () => {
+  showTeamMembersPanel(false);
+});
 
 
 // Éléments DOM
@@ -1956,6 +2150,19 @@ function openCharacterSheet(playerData){
   const stats = playerData.character.stats || {
     attaque:0, defense:0, esquive:0, vie:0, pointsRestants:10
   };
+  // ✅ AVATAR perso (visible si admin a uploadé)
+  const avatarEl = document.getElementById("sheetAvatar");
+  const avatarUrl = playerData?.character?.avatarUrl || "";
+
+  if (avatarEl) {
+    if (avatarUrl) {
+      avatarEl.src = avatarUrl + (avatarUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
+      avatarEl.style.display = "block";
+    } else {
+      avatarEl.src = "";
+      avatarEl.style.display = "none";
+    }
+  }
 
   const classe = playerData.character.classe;
   const base = classBaseStats[classe] || { attaque:0, defense:0, esquive:0, vie:0 };
@@ -2039,26 +2246,7 @@ document.querySelectorAll('.stat-row .inc').forEach(btn => {
   };
 });
 
-document.querySelectorAll('.stat-row .dec').forEach(btn => {
-  btn.onclick = () => {
-    const stat = btn.dataset.stat;
 
-    const key =
-      stat === "attaque" ? "allocAttaque" :
-      stat === "defense" ? "allocDefense" :
-      stat === "esquive" ? "allocEsquive" : "allocVie";
-
-    let val = parseInt(characterSheetPopup.dataset[key] || "0", 10);
-    if (val <= 0) return; // 👈 plancher = bonus de classe non retirable
-
-    characterSheetPopup.dataset[key] = val - 1;
-
-    let remaining = parseInt(pcText.dataset.pc || "0", 10);
-    pcText.dataset.pc = remaining + 1;
-
-    renderEffectiveStatsFromDatasets();
-  };
-});
 
 
 document.querySelectorAll('.stat-row .dec').forEach(btn => {
@@ -2155,6 +2343,9 @@ async function openRulesPopup() {
   overlay.style.display = "block";
   popup.style.display = "block";
 }
+// ✅ revenir par défaut sur la vue bâtiments
+showTeamMembersPanel(false);
+
 // ===== BOUTON "RÈGLES" =====
 safeOnClick('rulesBtn', () => {
   openRulesPopup();
@@ -2306,7 +2497,7 @@ function setAdminTab(tab){
   // afficher le bon panel
 pPanel.style.display = (tab === "players")  ? "block" : "none";
 mPanel.style.display = (tab === "monsters") ? "block" : "none";
-vPanel.style.display = (tab === "village")  ? "block" : "none";
+vPanel.style.display = "none"; // le village s’ouvre en popup séparée
 sPanel.style.display = (tab === "settings") ? "block" : "none";
 
 
@@ -2332,7 +2523,18 @@ safeOnClick('adminPlayersMainBtn', () => {
 });
 
 safeOnClick('adminMonstersMainBtn', () => setAdminTab("monsters"));
-safeOnClick('adminBuildingsMainBtn', () => setAdminTab("village"));
+safeOnClick('adminBuildingsMainBtn', () => {
+  // ouvre la popup bâtiments
+  adminPopup.style.display = "none";
+  document.getElementById("adminVillageSection").style.display = "block";
+  overlay.style.display = "block";
+});
+safeOnClick("adminVillageCloseBtn", () => {
+  document.getElementById("adminVillageSection").style.display = "none";
+  adminPopup.style.display = "block";
+  overlay.style.display = "block";
+});
+
 
 safeOnClick('tabPlayersBtn', () => setAdminTab("players"));
 safeOnClick('tabMonstersBtn', () => setAdminTab("monsters"));
@@ -2464,23 +2666,67 @@ safeOnClick('characterSubmit', async () => {
 
     const finalStats = { attaque, defense, esquive, vie, pointsRestants: creationPointsRestants - totalUsed };
 
-    await db.collection('players').doc(currentUser).set({
-        character: { name, classe, team, stats: finalStats, gold:0, houseLevel:0 },
-        level:1, xp:0
-    });
+  await db.collection('players').doc(currentUser).set({
+    character: { name, classe, team, stats: finalStats, gold:0 },
+    houseLevel: 0,
+    level:1, xp:0
+  }, { merge: true });
 
-    closeAllPopups();
+  // ✅ PUBLIC: visible par tout le monde connecté
+  await db.collection("playersPublic").doc(currentUser).set({
+    name: name,
+    team: team,
+    houseLevel: 0,
+    spentVillage: 0,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
 
-    welcomeText.textContent = `Bienvenue ${name}, ${classe}.`;
-    teamText.textContent = `Équipe : ${team}`;
+  closeAllPopups();
+});
+async function adminBackfillPlayersPublic(){
+  const u = firebase.auth().currentUser;
+  if(!u || u.email !== adminEmail){
+    alert("Admin seulement");
+    return;
+  }
 
-    const teamVillageBtn = document.getElementById("teamVillageBtn");
-if(teamVillageBtn){
-  teamVillageBtn.style.display = "inline-block";
-  teamVillageBtn.textContent = team; // ✅ ici on utilise la variable "team"
+  const snap = await db.collection("players").get();
+  const docs = snap.docs;
+
+  let batch = db.batch();
+  let count = 0;
+
+  for (const docSnap of docs) {
+    const p = docSnap.data();
+    const uid = docSnap.id;
+    if(!p || !p.character) continue;
+
+    const name = p.character.name || "";
+    const team = p.character.team || "";
+    const spentVillage = Number(p.character.spentVillage ?? 0);
+    const houseLevel = (typeof p.houseLevel === "number") ? p.houseLevel : 0;
+
+    // n'écrit pas des docs vides
+    if(!name || !team) continue;
+
+    batch.set(db.collection("playersPublic").doc(uid), {
+      name, team, houseLevel, spentVillage,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+
+    count++;
+
+    // commit tous les 450 pour éviter la limite 500
+    if(count % 450 === 0){
+      await batch.commit();
+      batch = db.batch();
+    }
+  }
+
+  await batch.commit();
+  alert(`✅ playersPublic rempli (écrits: ${count}).`);
 }
 
- });
 
 
 
@@ -3698,6 +3944,107 @@ elXpTot.textContent = `XP totale : ${totalXp} XP (niveau ${p.level || 1} + ${p.x
   popup.style.display = "block";
   overlay.style.display = "block";
 }
+async function uploadAdminAvatarForPlayer(uid) {
+  const u = firebase.auth().currentUser;
+  if (!u || u.email !== adminEmail) {
+    alert("Accès admin refusé.");
+    return;
+  }
+
+  const fileInput = document.getElementById("adminAvatarFile");
+  const preview = document.getElementById("adminAvatarPreview");
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    alert("Choisis une image d'abord.");
+    return;
+  }
+
+  // sécurité soft
+  if (!file.type.startsWith("image/")) {
+    alert("Fichier invalide : image uniquement.");
+    return;
+  }
+
+  // upload Storage
+  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+  const safeExt = ["png","jpg","jpeg","webp"].includes(ext) ? ext : "png";
+
+  const storageRef = firebase.storage().ref();
+  const path = `avatars/${uid}-${Date.now()}.${safeExt}`;
+  const imgRef = storageRef.child(path);
+
+  try {
+    await imgRef.put(file);
+    const url = await imgRef.getDownloadURL();
+
+    // Firestore : stocke l'url dans le joueur
+    await db.collection("players").doc(uid).update({
+      "character.avatarUrl": url
+    });
+
+    // optionnel : garder un miroir public si tu veux afficher les avatars dans l'équipe/village
+    await db.collection("playersPublic").doc(uid).set({
+      avatarUrl: url,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // UI
+    if (preview) {
+      preview.src = url;
+      preview.style.display = "block";
+    }
+
+    alert("✅ Avatar enregistré !");
+  } catch (e) {
+    console.error("uploadAdminAvatarForPlayer error =", e);
+    alert("Upload impossible : " + (e?.message || "Erreur inconnue"));
+  }
+}
+
+async function removeAdminAvatarForPlayer(uid) {
+  const u = firebase.auth().currentUser;
+  if (!u || u.email !== adminEmail) {
+    alert("Accès admin refusé.");
+    return;
+  }
+
+  if (!confirm("Retirer l'avatar de ce joueur ?")) return;
+
+  try {
+    await db.collection("players").doc(uid).update({
+      "character.avatarUrl": firebase.firestore.FieldValue.delete()
+    });
+
+    await db.collection("playersPublic").doc(uid).set({
+      avatarUrl: firebase.firestore.FieldValue.delete(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    const preview = document.getElementById("adminAvatarPreview");
+    if (preview) {
+      preview.src = "";
+      preview.style.display = "none";
+    }
+
+    const fileInput = document.getElementById("adminAvatarFile");
+    if (fileInput) fileInput.value = "";
+
+    alert("✅ Avatar retiré.");
+  } catch (e) {
+    console.error("removeAdminAvatarForPlayer error =", e);
+    alert("Suppression impossible : " + (e?.message || "Erreur inconnue"));
+  }
+}
+safeOnClick("adminAvatarUploadBtn", async () => {
+  if (!adminEditingUid) return;
+  await uploadAdminAvatarForPlayer(adminEditingUid);
+});
+
+safeOnClick("adminAvatarRemoveBtn", async () => {
+  if (!adminEditingUid) return;
+  await removeAdminAvatarForPlayer(adminEditingUid);
+});
 
 
 // enregistrer classe/équipe
