@@ -731,6 +731,27 @@ button:active{ transform: translateY(1px); }
   border-color: rgba(212,175,55,.35);
 }
 
+  /* Overlay derrière toutes les popups */
+  #overlay{
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9000 !important;
+  }
+
+  /* Popups "normales" */
+  .popup{
+    position: fixed !important;
+    z-index: 9100 !important;
+  }
+
+  /* Admin / Créatures */
+  #adminPopup{ z-index: 9200 !important; }
+  #monstersAdminPopup{ z-index: 9300 !important; }
+
+  /* ✅ Popup Modifier Créature : TOUJOURS au-dessus */
+  #editMonsterPopup{ z-index: 99999 !important; }
+
+
 
 </style>
 </head>
@@ -751,7 +772,7 @@ button:active{ transform: translateY(1px); }
     <button id="loginBtn">Connexion</button>
 
     <div class="login-footer">
-        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 038 - 10.02.2026
+        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 039 - 10.02.2026
     </div>
 </div>
 
@@ -924,6 +945,12 @@ button:active{ transform: translateY(1px); }
        style="width:110px; height:110px; object-fit:cover; border-radius:14px; border:2px solid #d4af37; display:none; margin:8px auto;" />
 
   <input id="adminAvatarFile" type="file" accept="image/*">
+<div style="text-align:center; margin:10px 0;">
+  <img id="adminEditAvatarImg"
+       src=""
+       alt="Avatar joueur"
+       style="width:90px; height:90px; object-fit:contain; border-radius:14px; display:none;">
+</div>
 
   <div class="toolbar" style="justify-content:center; gap:10px; margin-top:10px; flex-wrap:wrap;">
     <button id="adminAvatarUploadBtn" class="btn-primary" type="button">⬆️ Uploader</button>
@@ -1059,6 +1086,7 @@ button:active{ transform: translateY(1px); }
         <button type="button" id="addMonsterSaveBtn" class="btn-primary">
     Enregistrer
 </button>
+<div id="addMonsterImagePreview" style="margin-top:8px; text-align:center;"></div>
 
 
         <button type="button" id="addMonsterCancelBtn">
@@ -1066,6 +1094,33 @@ button:active{ transform: translateY(1px); }
         </button>
 
     </form>
+</div>
+
+<!-- ===== POPUP EDIT CREATURE ===== -->
+<div class="popup" id="editMonsterPopup" style="display:none;">
+  <h2>✏️ Modifier une créature</h2>
+
+  <input type="text" id="editMonsterName" placeholder="Nom de la créature">
+  <input type="number" id="editMonsterAttack" placeholder="Attaque">
+  <input type="number" id="editMonsterDefense" placeholder="Défense">
+  <input type="number" id="editMonsterHp" placeholder="Points de vie">
+  <input type="number" id="editMonsterGold" placeholder="Récompense en sous">
+
+  <p style="margin:10px 0 6px;">Image actuelle :</p>
+  <div style="text-align:center;">
+    <img id="editMonsterImagePreview"
+         src=""
+         alt="Image créature"
+         style="width:180px; height:180px; object-fit:contain; border-radius:12px; display:none;">
+  </div>
+
+  <p style="margin:10px 0 6px;">Changer l’image :</p>
+  <input type="file" id="editMonsterImage" accept="image/*">
+
+  <div style="display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap;">
+    <button id="editMonsterSaveBtn" class="btn-primary" type="button">💾 Enregistrer</button>
+    <button id="editMonsterCancelBtn" type="button">Annuler</button>
+  </div>
 </div>
 
 
@@ -1210,6 +1265,179 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// ✅ (optionnel) accès Storage
+const storage = firebase.storage();
+
+// =======================
+// ADMIN - EDIT CREATURE (popup)
+// =======================
+let editingMonsterId = null;
+let editingMonsterOldImageUrl = "";
+
+function openEditMonster(monster){
+  
+  const u = firebase.auth().currentUser;
+  if(!u || u.email !== adminEmail){
+    alert("Accès admin refusé.");
+    return;
+  }
+
+  if(!monster || !monster.id){
+    alert("Créature invalide.");
+    return;
+  }
+
+  editingMonsterId = monster.id;
+  editingMonsterOldImageUrl = monster.image || "";
+
+  // remplir champs
+  document.getElementById("editMonsterName").value = monster.name || "";
+  document.getElementById("editMonsterAttack").value = monster.attack ?? 0;
+  document.getElementById("editMonsterDefense").value = monster.defense ?? 0;
+  document.getElementById("editMonsterHp").value = monster.hp ?? 0;
+  document.getElementById("editMonsterGold").value = monster.gold ?? 0;
+
+  // preview image actuelle
+  const img = document.getElementById("editMonsterImagePreview");
+  if(img){
+    if(monster.image){
+      img.src = monster.image;
+      img.style.display = "block";
+    } else {
+      img.src = "";
+      img.style.display = "none";
+    }
+  }
+
+  // reset file input
+  const fileInput = document.getElementById("editMonsterImage");
+  if(fileInput) fileInput.value = "";
+
+  // ✅ cacher la popup Admin derrière
+const adminPop = document.getElementById("adminPopup");
+if (adminPop) adminPop.style.display = "none";
+
+// ✅ afficher overlay + popup edit au-dessus
+overlay.style.display = "block";
+document.getElementById("editMonsterPopup").style.display = "block";
+
+}
+window.openEditMonster = openEditMonster;
+function closeEditMonsterPopup(){
+  document.getElementById("editMonsterPopup").style.display = "none";
+
+  // ✅ revenir sur la liste admin créatures (pas l’admin général)
+  const monstersPop = document.getElementById("monstersAdminPopup");
+  if (monstersPop) monstersPop.style.display = "block";
+
+  // overlay reste visible car on reste dans l’admin
+  overlay.style.display = "block";
+
+  editingMonsterId = null;
+  editingMonsterOldImageUrl = "";
+
+  const fileInput = document.getElementById("editMonsterImage");
+  if(fileInput) fileInput.value = "";
+}
+
+
+safeOnClick("editMonsterCancelBtn", () => {
+  closeEditMonsterPopup();
+});
+
+// preview instantané quand on choisit un fichier
+const editMonsterImageInput = document.getElementById("editMonsterImage");
+if(editMonsterImageInput){
+  editMonsterImageInput.onchange = () => {
+    const f = editMonsterImageInput.files?.[0];
+    const img = document.getElementById("editMonsterImagePreview");
+    if(!img) return;
+
+    if(f){
+      img.src = URL.createObjectURL(f);
+      img.style.display = "block";
+    } else {
+      img.src = editingMonsterOldImageUrl || "";
+      img.style.display = editingMonsterOldImageUrl ? "block" : "none";
+    }
+  };
+}
+window.closeEditMonsterPopup = closeEditMonsterPopup;
+safeOnClick("editMonsterSaveBtn", async () => {
+  const u = firebase.auth().currentUser;
+  if(!u || u.email !== adminEmail){
+    alert("Accès admin refusé.");
+    return;
+  }
+
+  if(!editingMonsterId){
+    alert("Aucune créature en cours d’édition.");
+    return;
+  }
+
+  const name = document.getElementById("editMonsterName").value.trim();
+  const attack = parseInt(document.getElementById("editMonsterAttack").value, 10);
+  const defense = parseInt(document.getElementById("editMonsterDefense").value, 10);
+  const hp = parseInt(document.getElementById("editMonsterHp").value, 10);
+  const gold = parseInt(document.getElementById("editMonsterGold").value, 10);
+
+  if(!name || Number.isNaN(attack) || Number.isNaN(defense) || Number.isNaN(hp) || Number.isNaN(gold)){
+    alert("Champs invalides (les nombres peuvent être à 0).");
+    return;
+  }
+
+  // upload image si nouvelle image choisie
+  let imageUrl = editingMonsterOldImageUrl || "";
+  const file = document.getElementById("editMonsterImage").files?.[0];
+
+  if(file){
+    if(!file.type.startsWith("image/")){
+      alert("Fichier invalide (image uniquement).");
+      return;
+    }
+
+    try{
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const safeExt = ["png","jpg","jpeg","webp"].includes(ext) ? ext : "png";
+
+      const storageRef = firebase.storage().ref();
+      const safeName = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+      const path = `monsters/${safeName}-${editingMonsterId}-${Date.now()}.${safeExt}`;
+
+      const imgRef = storageRef.child(path);
+      await imgRef.put(file);
+      imageUrl = await imgRef.getDownloadURL();
+    } catch(e){
+      console.error("Upload image monstre échoué", e);
+      alert("Upload image échoué (vérifie Storage + règles).");
+      return;
+    }
+  }
+
+  await db.collection("monsters").doc(editingMonsterId).update({
+    name,
+    attack,
+    defense,
+    hp,
+    gold,
+    image: imageUrl
+  });
+
+  // met à jour le cache local si tu utilises monstersCache
+  if(Array.isArray(monstersCache)){
+    const idx = monstersCache.findIndex(x => x.id === editingMonsterId);
+    if(idx >= 0){
+      monstersCache[idx] = { ...monstersCache[idx], name, attack, defense, hp, gold, image: imageUrl };
+    }
+  }
+
+  alert("✅ Créature modifiée !");
+  closeEditMonsterPopup();
+
+  if(typeof loadMonstersList === "function") loadMonstersList();
+});
+
 // Fonction utilitaire pour assigner un onclick en toute sécurité
 function safeOnClick(id, callback){
     const el = document.getElementById(id);
@@ -1556,6 +1784,7 @@ function renderMonstersList() {
   const sort = document.getElementById('monsterSortSelect').value;
 
   let rows = monstersCache.slice();
+
 
   // filtre
   if (q) rows = rows.filter(m => (m.name || "").toLowerCase().includes(q));
@@ -2909,6 +3138,7 @@ else if(monster.name.toLowerCase().includes('balrog')) monsterEmoji='🔥';
 const pHP = playerStats.hp;
 const pATK = playerStats.attack;
 const pDEF = playerStats.defense;
+const avatarUrl = data?.character?.avatarUrl || "";
 
 const mHP = monster.hp ?? 0;
 const mATK = monster.attack ?? 0;
@@ -2965,6 +3195,16 @@ contentDiv.innerHTML = `
     <div class="combat-top">
       <div class="combat-card">
         <div class="combat-name">${data.character.name}</div>
+
+        ${avatarUrl ? `
+          <div style="text-align:center; margin:8px 0;">
+            <img src="${avatarUrl}" alt="Avatar"
+  style="width:72px; height:72px; object-fit:contain; border-radius:14px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));">
+
+
+          </div>
+        ` : ``}
+
         <div class="combat-stats">
           <span class="badge">❤️ HP: ${pHP}</span>
           <span class="badge">⚔️ ATK: ${pATK}</span>
@@ -2991,6 +3231,7 @@ contentDiv.innerHTML = `
     <div class="combat-log">${logText}</div>
   </div>
 `;
+
 
 showPopup('explorePopup');
 
@@ -3323,6 +3564,8 @@ function closeAddMonsterPopup(){
     document.getElementById('addMonsterHp').value = '';
     document.getElementById('addMonsterGold').value = '';
     document.getElementById('addMonsterImage').value = '';
+    document.getElementById('addMonsterImagePreview').innerHTML = '';
+
 }
 
 // Ouvrir popup depuis Admin
@@ -3354,29 +3597,33 @@ safeOnClick('addMonsterSaveBtn', async () => {
         return;
     }
 
-    // Image : si tu n’as pas encore Firebase Storage configuré correctement, laisse vide
-    let imageUrl = "";
+    // ✅ Upload image (optionnel)
+let imageUrl = "";
+const file = document.getElementById("addMonsterImage").files?.[0];
 
-    // ✅ Si tu veux activer l’upload image, il faut (1) inclure firebase-storage-compat.js et (2) règles Storage.
-    // Pour éviter de casser ton app maintenant, on ne tente l’upload que si firebase.storage existe.
-    console.log("firebase.storage =", firebase.storage);
-console.log("imageFile =", imageFile);
+if (file) {
+  if (!file.type.startsWith("image/")) {
+    alert("Fichier invalide (image uniquement).");
+    return;
+  }
 
-    if (imageFile && typeof firebase.storage === "function") {
-        try{
-            const storageRef = firebase.storage().ref();
-            const safeName = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
-            const imgRef = storageRef.child("monsters/" + safeName + "-" + Date.now() + ".png");
-            await imgRef.put(imageFile);
-            imageUrl = await imgRef.getDownloadURL();
-        }catch(e){
-            console.error(e);
-            alert("Image non enregistrée (Storage non configuré). La créature sera ajoutée sans image.");
-            imageUrl = "";
-        }
-    }
-console.log("IMAGE URL =", imageUrl);
-alert(imageUrl);
+  try {
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const safeExt = ["png", "jpg", "jpeg", "webp"].includes(ext) ? ext : "png";
+
+    const safeName = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const path = `monsters/${safeName}-${Date.now()}.${safeExt}`;
+
+    const imgRef = firebase.storage().ref().child(path);
+    await imgRef.put(file);
+    imageUrl = await imgRef.getDownloadURL();
+  } catch (e) {
+    console.error("Upload image création échoué", e);
+    alert("Upload image échoué (Storage/règles). Créature non enregistrée.");
+    return;
+  }
+}
+
 
     await db.collection("monsters").add({
         name,
@@ -3406,21 +3653,7 @@ document.getElementById('addMonsterImage').value = '';
 // =======================
 let monstersCache = [];
 
-function openMonstersAdminPopup(){
-  const u = firebase.auth().currentUser;
-  if(!u || u.email !== adminEmail){
-    alert("Accès admin refusé.");
-    return;
-  }
 
-  overlay.style.display = 'block';
-
-  // on cache le panel admin et on affiche la page créatures
-  document.getElementById('adminPopup').style.display = 'none';
-  document.getElementById('monstersAdminPopup').style.display = 'block';
-
-  loadMonstersList();
-}
 
 function backToAdminPopup(){
   document.getElementById('monstersAdminPopup').style.display = 'none';
@@ -3919,6 +4152,19 @@ async function openAdminPlayerEdit(uid) {
     alert("La popup 'édition joueur' n'est pas encore dans ton HTML (ids manquants).");
     return;
   }
+// ✅ Affiche l'avatar existant dans la popup admin
+const avatarImg = document.getElementById("adminEditAvatarImg");
+const avatarUrl = p?.character?.avatarUrl || "";
+
+if (avatarImg) {
+  if (avatarUrl) {
+    avatarImg.src = avatarUrl;
+    avatarImg.style.display = "block";
+  } else {
+    avatarImg.src = "";
+    avatarImg.style.display = "none";
+  }
+}
 
   adminEditingUid = uid;
 
