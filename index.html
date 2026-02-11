@@ -772,7 +772,7 @@ button:active{ transform: translateY(1px); }
     <button id="loginBtn">Connexion</button>
 
     <div class="login-footer">
-        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 039 - 10.02.2026
+        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 041 - 11.02.2026
     </div>
 </div>
 
@@ -935,6 +935,7 @@ button:active{ transform: translateY(1px); }
   <div class="toolbar" style="justify-content:center; gap:10px; margin-top:12px; flex-wrap:wrap;">
     <button id="adminEditSaveBtn" class="btn-primary" type="button">💾 Enregistrer</button>
     <button id="adminEditGiveXpBtn" type="button">✨ Donner XP</button>
+      <button id="adminDeleteCharacterBtn" type="button">🗑️ Supprimer personnage</button>
       <div class="gold-rule"></div>
 
   <h3 style="margin:10px 0 8px;">🖼️ Avatar du personnage</h3>
@@ -2278,11 +2279,11 @@ async function donateToVillage(teamId){
       "character.spentVillage": (parseInt(p.character.spentVillage,10) || 0) + amount
     });
 
-    if(tSnap.exists){
-      tx.update(teamRef, { gold: villageGold + amount });
-    } else {
-      tx.set(teamRef, { gold: amount, builtIds: [] }, { merge:true });
-    }
+    // ⚠️ Les docs teams/dragon et teams/serpent doivent déjà exister (créés par l’admin)
+tx.update(teamRef, {
+  gold: firebase.firestore.FieldValue.increment(amount)
+});
+
   });
 
   // ✅ ici amount existe + on est dans une async function
@@ -3103,15 +3104,16 @@ const playerStats = {
     const snapshot = await db.collection('monsters').get();
 
 const monsters = [];
-snapshot.forEach(doc => monsters.push(doc.data()));
+snapshot.forEach(docSnap => monsters.push({ id: docSnap.id, ...docSnap.data() }));
 
 if(monsters.length === 0){
-    alert("Aucune créature disponible !");
-    return;
+  alert("Aucune créature disponible !");
+  return;
 }
 
 const idx = Math.floor(Math.random() * monsters.length);
 const monster = monsters[idx];
+
 
 // Enregistrement du monstre rencontré pour le bestiaire
 let encountered = data.encountered || [];
@@ -3216,20 +3218,28 @@ contentDiv.innerHTML = `
       <div class="combat-vs">VS</div>
 
       <div class="combat-card" id="monsterCard">
-        <div class="combat-name">${monster.name}</div>
-        <div class="combat-emoji">${monsterEmoji}</div>
-        <div class="combat-stats">
-          <span class="badge">❤️ HP: ${mHP}</span>
-          <span class="badge">⚔️ ATK: ${mATK}</span>
-          <span class="badge">🛡️ DEF: ${mDEF}</span>
-          <span class="badge">💰 Or: ${monster.gold ?? 0}</span>
-        </div>
-        <div class="hpbar"><div class="hpfill" style="width:100%"></div></div>
-      </div>
-    </div>
+  <div class="combat-name">${monster.name}</div>
 
-    <div class="combat-log">${logText}</div>
+  ${monster.image ? `
+    <div style="text-align:center; margin:8px 0;">
+      <img src="${monster.image}"
+           alt="Monstre"
+           style="width:92px; height:92px; object-fit:contain; border-radius:14px;
+                  filter: drop-shadow(0 2px 4px rgba(0,0,0,.35));">
+    </div>
+  ` : `
+    <div class="combat-emoji">${monsterEmoji}</div>
+  `}
+
+  <div class="combat-stats">
+    <span class="badge">❤️ HP: ${mHP}</span>
+    <span class="badge">⚔️ ATK: ${mATK}</span>
+    <span class="badge">🛡️ DEF: ${mDEF}</span>
+    <span class="badge">💰 Or: ${monster.gold ?? 0}</span>
   </div>
+  <div class="hpbar"><div class="hpfill" style="width:100%"></div></div>
+</div>
+
 `;
 
 
@@ -3535,7 +3545,8 @@ function showMonsterDetails(monster) {
 
     content.innerHTML = `
         <h2>${monster.name}</h2>
-        ${monster.image ? `<img src="${monster.image}" style="width:180px; display:block; margin:10px auto; border-radius:12px; border:2px solid #d4af37;">` : ""}
+        ${monster.image ? `<img src="${monster.image}${monster.image.includes('?') ? '&' : '?'}v=${Date.now()}"
+ style="width:180px; display:block; margin:10px auto; border-radius:12px; border:2px solid #d4af37;">` : ""}
         <p>❤️ Vie : ${monster.hp}</p>
         <p>⚔️ Attaque : ${monster.attack}</p>
         <p>🛡️ Défense : ${monster.defense}</p>
@@ -3933,11 +3944,18 @@ async function deleteBuilding(buildingId) {
 }
 
 // =======================
-// ADMIN - LISTE BÂTIMENTS (officielle)
+// ADMIN - LISTE BÂTIMENTS (officielle) -> seulement si admin connecté
 // =======================
-if (document.getElementById("buildingsList")) {
-  db.collection("buildingsCatalog").onSnapshot((snapshot) => {
+let unsubBuildingsCatalog = null;
+
+function startBuildingsCatalogLive(){
+  // évite double abonnement
+  if (unsubBuildingsCatalog) return;
+
+  unsubBuildingsCatalog = db.collection("buildingsCatalog").onSnapshot((snapshot) => {
     const list = document.getElementById("buildingsList");
+    if(!list) return;
+
     list.innerHTML = "";
 
     snapshot.forEach((docSnap) => {
@@ -3966,8 +3984,29 @@ if (document.getElementById("buildingsList")) {
     if (snapshot.empty) {
       list.innerHTML = "<em>Aucun bâtiment dans le catalogue.</em>";
     }
+  }, (err) => {
+    console.error("buildingsCatalog onSnapshot error:", err);
   });
 }
+
+function stopBuildingsCatalogLive(){
+  if(unsubBuildingsCatalog){
+    unsubBuildingsCatalog();
+    unsubBuildingsCatalog = null;
+  }
+}
+
+// ✅ On (dé)clenche selon la connexion + admin
+firebase.auth().onAuthStateChanged((user) => {
+  const isAdmin = user && (user.email === adminEmail);
+
+  if(isAdmin && document.getElementById("buildingsList")){
+    startBuildingsCatalogLive();
+  } else {
+    stopBuildingsCatalogLive();
+  }
+});
+
 // =======================
 // ADMIN - JOUEURS (liste simple par équipe) - TEMPS RÉEL (robuste)
 // =======================
@@ -4322,6 +4361,50 @@ safeOnClick("adminEditGiveXpBtn", async () => {
 
   await giveXpToPlayer(adminEditingUid, p, amount);
   alert(`${amount} XP accordée ✅`);
+});
+safeOnClick("adminDeleteCharacterBtn", async () => {
+  const u = firebase.auth().currentUser;
+  if (!u || u.email !== adminEmail) {
+    alert("Accès admin refusé.");
+    return;
+  }
+  if (!adminEditingUid) return;
+
+  const sure = prompt(
+    "⚠️ Tu vas supprimer le personnage (pas le compte).\n" +
+    "Tape SUPPRIMER pour confirmer :"
+  );
+  if (sure !== "SUPPRIMER") return;
+
+  try {
+    // 1) reset du joueur => plus de personnage
+    await db.collection("players").doc(adminEditingUid).set({
+      character: null,
+      level: 1,
+      xp: 0,
+      houseLevel: 0,
+      encountered: firebase.firestore.FieldValue.delete()
+    }, { merge: true });
+
+    // 2) playersPublic : on enlève le perso de la liste d’équipe
+    await db.collection("playersPublic").doc(adminEditingUid).delete();
+
+    alert("✅ Personnage supprimé. Le joueur devra recréer un personnage à la prochaine connexion.");
+
+    // ferme la popup edit joueur et retourne à la liste
+    document.getElementById("adminPlayerEditPopup").style.display = "none";
+    document.getElementById("adminPopup").style.display = "block";
+    overlay.style.display = "block";
+
+    adminEditingUid = null;
+
+    // refresh liste admin
+    startAdminPlayersLive();
+
+  } catch (e) {
+    console.error("adminDeleteCharacterBtn error =", e);
+    alert("Erreur suppression : " + (e?.message || "inconnue"));
+  }
 });
 
 // fermer / retour à la liste joueurs
