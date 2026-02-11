@@ -1,0 +1,13 @@
+{
+  "name": "Popote & Dragons",
+  "short_name": "P&D",
+  "start_url": "/dragonv2/",
+  "scope": "/dragonv2/",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#1f2937",
+  "icons": [
+    { "src": "/dragonv2/favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/dragonv2/favicon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
