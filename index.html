@@ -768,7 +768,53 @@ button:active{ transform: translateY(1px); }
   /* ✅ Popup Modifier Créature : TOUJOURS au-dessus */
   #editMonsterPopup{ z-index: 99999 !important; }
 
+.rankingTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.rankingTable th, .rankingTable td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  text-align: left;
+}
+.tabsRow{
+  display:flex;
+  gap:8px;
+  margin: 8px 0 12px;
+}
+.tabBtn{
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: inherit;
+  cursor: pointer;
+}
+.tabBtn.active{
+  background: rgba(255,255,255,0.18);
+}
+.tabBtn:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.tabPanel{ margin-top: 6px; }
 
+.rankingTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.rankingTable th, .rankingTable td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  text-align: left;
+}
+.rankingTable th:nth-child(1),
+.rankingTable td:nth-child(1) { width: 40px; }
+
+.muted { opacity: 0.8; font-size: 0.95em; }
+.hidden { display: none !important; }
 
 </style>
 </head>
@@ -789,7 +835,7 @@ button:active{ transform: translateY(1px); }
     <button id="loginBtn">Connexion</button>
 
     <div class="login-footer">
-        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 043 - 11.02.2026
+        2026 - Imaginé et créé par PM avec l'aide de Chat GPT - MAJ 045 - 20.02.2026
     </div>
 </div>
 
@@ -819,6 +865,7 @@ button:active{ transform: translateY(1px); }
         <div class="actions-panel">
             <button id="updatesBtn" class="btn-rules">🛠️ MAJ</button>
             <button id="rulesBtn" class="btn-rules">📜 Règles</button>
+            <button id="btnRanking" class="mainBtn">🏆 Classement</button>
             <button id="teamVillageBtn" style="display:none;">🏘️ Village</button>
             <button id="upgradeHouseBtn">🏠 Améliorer l'habitation</button>
             <button id="openCharacterSheetBtn">📝 Fiche</button>
@@ -843,6 +890,59 @@ button:active{ transform: translateY(1px); }
             <button id="cancelUpgradeBtn">Annuler</button>
         </div>
     </div>
+
+<!-- POPUP CLASSEMENT -->
+<div id="rankingModal" class="modal hidden">
+  <div class="modalContent">
+    <div class="modalHeader">
+      <h2>🏆 Classements</h2>
+      <button id="btnCloseRanking" class="closeBtn">✖</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabsRow">
+      <button class="tabBtn active" id="tabDonators">Donateurs</button>
+      <button class="tabBtn" id="tabWins">Victoires</button>
+    </div>
+
+    <!-- Panel: Donateurs -->
+    <div id="panelDonators" class="tabPanel">
+      <div id="rankingLoading" class="muted">Chargement...</div>
+      <div id="rankingEmpty" class="muted hidden">Aucun don enregistré pour le moment.</div>
+
+      <table id="rankingTable" class="rankingTable hidden">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Personnage</th>
+            <th>Équipe</th>
+            <th>Or donné</th>
+          </tr>
+        </thead>
+        <tbody id="rankingTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Panel: Victoires (placeholder) -->
+    <div id="panelWins" class="tabPanel hidden">
+  <div id="winsLoading" class="muted">Chargement...</div>
+  <div id="winsEmpty" class="muted hidden">Aucune victoire enregistrée pour le moment.</div>
+
+  <table id="winsTable" class="rankingTable hidden">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Personnage</th>
+        <th>Équipe</th>
+        <th>Victoires</th>
+      </tr>
+    </thead>
+    <tbody id="winsTbody"></tbody>
+  </table>
+</div>
+
+  </div>
+</div>
  <!-- BANQUE -->
     <div class="bank-dashboard">
         <h3>🏦 Banque</h3>
@@ -1719,7 +1819,111 @@ if(teamVillageBtn){
   return;
 }
 
+// ================================
+// CLASSEMENT DONATEURS
+// ================================
+let unsubRanking = null;
 
+const rankingModal = document.getElementById("rankingModal");
+const btnRanking = document.getElementById("btnRanking");
+const btnCloseRanking = document.getElementById("btnCloseRanking");
+
+const rankingLoading = document.getElementById("rankingLoading");
+const rankingEmpty = document.getElementById("rankingEmpty");
+const rankingTable = document.getElementById("rankingTable");
+const rankingTbody = document.getElementById("rankingTbody");
+
+function openRankingModal() {
+  rankingModal.classList.remove("hidden");
+  startRankingListener();
+}
+
+function closeRankingModal() {
+  rankingModal.classList.add("hidden");
+  stopRankingListener();
+}
+
+function stopRankingListener() {
+  if (unsubRanking) {
+    unsubRanking();
+    unsubRanking = null;
+  }
+}
+
+function teamLabelFromTeamId(teamId) {
+  const t = (teamId || "").toLowerCase();
+  if (t.includes("dragon")) return "Ordre du Dragon Pourpre";
+  if (t.includes("serpent")) return "Confrérie du Serpent Noir";
+  return teamId || "—";
+}
+
+function renderRanking(rows) {
+  rankingTbody.innerHTML = "";
+
+  if (!rows.length) {
+    rankingLoading.classList.add("hidden");
+    rankingTable.classList.add("hidden");
+    rankingEmpty.classList.remove("hidden");
+    return;
+  }
+
+  rankingEmpty.classList.add("hidden");
+  rankingLoading.classList.add("hidden");
+  rankingTable.classList.remove("hidden");
+
+  rows.forEach((r, idx) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td>${escapeHtml(r.characterName || "—")}</td>
+      <td>${escapeHtml(teamLabelFromTeamId(r.teamId))}</td>
+      <td>${Number(r.donatedGold || 0).toLocaleString("fr-FR")}</td>
+    `;
+    rankingTbody.appendChild(tr);
+  });
+}
+
+// petit helper XSS-safe si tu n'en as pas déjà
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (m) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
+
+function startRankingListener() {
+  stopRankingListener();
+
+  rankingLoading.classList.remove("hidden");
+  rankingEmpty.classList.add("hidden");
+  rankingTable.classList.add("hidden");
+
+  // Compat v9: firebase.firestore()
+  // -> donationLeaderboard trié par donatedGold décroissant
+  const q = firebase.firestore()
+    .collection("donationLeaderboard")
+    .orderBy("donatedGold", "desc")
+    .limit(200);
+
+  unsubRanking = q.onSnapshot((snap) => {
+    const rows = [];
+    snap.forEach((doc) => rows.push(doc.data()));
+    renderRanking(rows);
+  }, (err) => {
+    console.error("Ranking onSnapshot error:", err);
+    rankingLoading.classList.add("hidden");
+    rankingEmpty.classList.remove("hidden");
+    rankingEmpty.textContent = "Erreur de chargement du classement.";
+  });
+}
+
+// Bind boutons
+if (btnRanking) btnRanking.addEventListener("click", openRankingModal);
+if (btnCloseRanking) btnCloseRanking.addEventListener("click", closeRankingModal);
+
+// optionnel: fermer en cliquant fond modal
+rankingModal?.addEventListener("click", (e) => {
+  if (e.target === rankingModal) closeRankingModal();
+});
 
 
 // --- Chargement de la banque ---
@@ -2296,20 +2500,194 @@ async function donateToVillage(teamId){
       "character.spentVillage": (parseInt(p.character.spentVillage,10) || 0) + amount
     });
 
+    // ✅ AJOUT LEADERBOARD ICI
+    const lbRef = db.collection("donationLeaderboard").doc(currentUser);
+    tx.set(lbRef, {
+      uid: currentUser,
+      characterName: p.character.name || "Sans nom",
+      teamId: p.character.teamId || teamId || "—",
+      donatedGold: firebase.firestore.FieldValue.increment(amount),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
     // ⚠️ Les docs teams/dragon et teams/serpent doivent déjà exister (créés par l’admin)
-tx.update(teamRef, {
-  gold: firebase.firestore.FieldValue.increment(amount)
-});
+    tx.update(teamRef, {
+      gold: firebase.firestore.FieldValue.increment(amount)
+    });
 
   });
 
-  // ✅ ici amount existe + on est dans une async function
   await syncPlayersPublic();
-
-
   alert(`💰 Don effectué : ${amount} sous ajoutés au village.`);
 }
+// ================================
+// POPUP CLASSEMENT + ONGLET DONATEURS
+// ================================
+let unsubRanking = null;
 
+const rankingModal = document.getElementById("rankingModal");
+const btnRanking = document.getElementById("btnRanking");
+const btnCloseRanking = document.getElementById("btnCloseRanking");
+
+const tabDonators = document.getElementById("tabDonators");
+const tabWins = document.getElementById("tabWins");
+
+const panelDonators = document.getElementById("panelDonators");
+const panelWins = document.getElementById("panelWins");
+
+const rankingLoading = document.getElementById("rankingLoading");
+const rankingEmpty = document.getElementById("rankingEmpty");
+const rankingTable = document.getElementById("rankingTable");
+const rankingTbody = document.getElementById("rankingTbody");
+
+const winsLoading = document.getElementById("winsLoading");
+const winsEmpty = document.getElementById("winsEmpty");
+const winsTable = document.getElementById("winsTable");
+const winsTbody = document.getElementById("winsTbody");
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (m) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
+
+function teamLabelFromTeamId(teamId) {
+  const t = (teamId || "").toLowerCase();
+  if (t.includes("dragon")) return "Ordre du Dragon Pourpre";
+  if (t.includes("serpent")) return "Confrérie du Serpent Noir";
+  return teamId || "—";
+}
+
+function stopRankingListener(){
+  if (unsubRanking) { unsubRanking(); unsubRanking = null; }
+}
+
+function startDonatorsListener(){
+  stopRankingListener();
+
+  rankingLoading.classList.remove("hidden");
+  rankingEmpty.classList.add("hidden");
+  rankingTable.classList.add("hidden");
+  rankingTbody.innerHTML = "";
+
+  const q = db.collection("donationLeaderboard")
+    .orderBy("donatedGold", "desc")
+    .limit(200);
+
+  unsubRanking = q.onSnapshot((snap) => {
+    const rows = [];
+    snap.forEach(doc => rows.push(doc.data()));
+
+    rankingTbody.innerHTML = "";
+    if (!rows.length) {
+      rankingLoading.classList.add("hidden");
+      rankingTable.classList.add("hidden");
+      rankingEmpty.classList.remove("hidden");
+      rankingEmpty.textContent = "Aucun don enregistré pour le moment.";
+      return;
+    }
+
+    rankingLoading.classList.add("hidden");
+    rankingEmpty.classList.add("hidden");
+    rankingTable.classList.remove("hidden");
+
+    rows.forEach((r, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${escapeHtml(r.characterName || "—")}</td>
+        <td>${escapeHtml(teamLabelFromTeamId(r.teamId))}</td>
+        <td>${Number(r.donatedGold || 0).toLocaleString("fr-FR")}</td>
+      `;
+      rankingTbody.appendChild(tr);
+    });
+  }, (err) => {
+    console.error("Ranking onSnapshot error:", err);
+    rankingLoading.classList.add("hidden");
+    rankingEmpty.classList.remove("hidden");
+    rankingEmpty.textContent = "Erreur de chargement du classement.";
+  });
+}
+function startWinsListener(){
+  stopRankingListener();
+
+  winsLoading.classList.remove("hidden");
+  winsEmpty.classList.add("hidden");
+  winsTable.classList.add("hidden");
+  winsTbody.innerHTML = "";
+
+  const q = db.collection("winsLeaderboard")
+    .orderBy("wins", "desc")
+    .limit(200);
+
+  unsubRanking = q.onSnapshot((snap) => {
+    const rows = [];
+    snap.forEach(doc => rows.push(doc.data()));
+
+    winsTbody.innerHTML = "";
+    if (!rows.length) {
+      winsLoading.classList.add("hidden");
+      winsTable.classList.add("hidden");
+      winsEmpty.classList.remove("hidden");
+      winsEmpty.textContent = "Aucune victoire enregistrée pour le moment.";
+      return;
+    }
+
+    winsLoading.classList.add("hidden");
+    winsEmpty.classList.add("hidden");
+    winsTable.classList.remove("hidden");
+
+    rows.forEach((r, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${escapeHtml(r.characterName || "—")}</td>
+        <td>${escapeHtml(teamLabelFromTeamId(r.teamId))}</td>
+        <td>${Number(r.wins || 0).toLocaleString("fr-FR")}</td>
+      `;
+      winsTbody.appendChild(tr);
+    });
+  }, (err) => {
+    console.error("Wins onSnapshot error:", err);
+    winsLoading.classList.add("hidden");
+    winsEmpty.classList.remove("hidden");
+    winsEmpty.textContent = "Erreur de chargement du classement.";
+  });
+}
+function showTab(which){
+  const isDon = which === "donators";
+
+  tabDonators.classList.toggle("active", isDon);
+  tabWins.classList.toggle("active", !isDon);
+
+  panelDonators.classList.toggle("hidden", !isDon);
+  panelWins.classList.toggle("hidden", isDon);
+
+  if (which === "donators") startDonatorsListener();
+else if (which === "wins") startWinsListener();
+else stopRankingListener();
+}
+
+function openRankingModal(){
+  rankingModal.classList.remove("hidden");
+  showTab("donators"); // par défaut
+}
+
+function closeRankingModal(){
+  rankingModal.classList.add("hidden");
+  stopRankingListener();
+}
+
+btnRanking?.addEventListener("click", openRankingModal);
+btnCloseRanking?.addEventListener("click", closeRankingModal);
+
+tabDonators?.addEventListener("click", () => showTab("donators"));
+tabWins?.addEventListener("click", () => showTab("wins"));
+
+// optionnel: fermer si clic sur le fond
+rankingModal?.addEventListener("click", (e) => {
+  if (e.target === rankingModal) closeRankingModal();
+});
 
 
 // boutons popup village
@@ -3198,7 +3576,33 @@ if (gained > 0) {
   console.log("ℹ️ pas de gain -> totalGoldEarned inchangé");
 }
 
-await db.collection('players').doc(currentUser).update(updateData);
+// ✅ AJOUT : victoire exploration -> incrément joueur + leaderboard (UNIQUEMENT si victoire)
+const batch = db.batch();
+const playerRef = db.collection("players").doc(currentUser);
+batch.update(playerRef, updateData);
+
+if (isWin) {
+  // 1) compteur côté joueur
+  batch.update(playerRef, {
+    "character.totalWinsExploration": firebase.firestore.FieldValue.increment(1)
+  });
+
+  // 2) leaderboard public
+  const teamId = (typeof getTeamDocId === "function")
+    ? (getTeamDocId(data.character.team) || data.character.team || "—")
+    : (data.character.team || "—");
+
+  const winsRef = db.collection("winsLeaderboard").doc(currentUser);
+  batch.set(winsRef, {
+    uid: currentUser,
+    characterName: data.character.name || "Sans nom",
+    teamId: teamId,
+    wins: firebase.firestore.FieldValue.increment(1),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+
+await batch.commit();
 
 
 
